@@ -1,5 +1,6 @@
 import { Link } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, } from "react-native";
+import { Button } from "react-native-paper";
 
 export default function Index() {
   return (
@@ -8,6 +9,7 @@ export default function Index() {
       <Text>Edit app/index.tsx to edit this screen.</Text>
       <Link href="/login" style={styles.navButton}>Login</Link>
       <Button>Sign Up</Button>
+      <Text>başlangıç sayfası</Text>
     </View>
   );
 }
