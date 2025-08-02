@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 
 
-export default function LoginScreen() {
+export default function ExploreScreen() {
     return (
         <View>
             <Text>Login</Text>
