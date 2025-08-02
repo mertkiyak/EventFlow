@@ -1,6 +1,8 @@
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { ReactNode, useEffect } from "react";
+import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 // RouteGuard bileşeni: sadece yetkili kullanıcıların belirli sayfaları görmesini sağlar
 function RouteGuard({ children }: { children: ReactNode }) {
@@ -23,13 +25,17 @@ function RouteGuard({ children }: { children: ReactNode }) {
  
 // RootLayout bileşeni: tüm uygulama yapısının ana layout'u
 export default function RootLayout() {
-  return (// RouteGuard bileşeni ile içerik sarılıyor, böylece sadece yetkili kullanıcılar erişebilir
+  return (        // RouteGuard bileşeni ile içerik sarılıyor, böylece sadece yetkili kullanıcılar erişebilir
     <AuthProvider>
+      <PaperProvider>
+      <SafeAreaProvider>
       <RouteGuard> 
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
       </RouteGuard>
+      </SafeAreaProvider>
+      </PaperProvider>
     </AuthProvider> 
 
   );
@@ -37,12 +43,4 @@ export default function RootLayout() {
 
 
 
-// export default function RootLayout() {
-//   return (
-//     <Stack>
-//       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-//       <Stack.Screen name="auth" options={{ headerShown: false }} />
-//     </Stack>
-//   );
-// }
 
