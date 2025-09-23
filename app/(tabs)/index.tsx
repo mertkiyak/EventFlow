@@ -342,12 +342,5 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     marginTop: 2,
     paddingRight: 16,
-  }, 
-  cardText: {
-    color: "#6c6c80",
   },
-  cardTextCompleted: {
-    textDecorationLine: "line-through",
-    color: "#6c6c80",
-  }
 });
