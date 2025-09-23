@@ -10,3 +10,8 @@ export const databases = new Databases(client)
 
 export const DATABASE_ID = process.env.EXPO_PUBLIC_DB_ID!  // Database ID
 export const COLLECTION_ID = process.env.EXPO_PUBLIC_DB_COLLECTION_ID!  // Collection ID;
+export const COMPLETIONS_COLLECTION_ID = process.env.EXPO_PUBLIC_DB_COMPLETIONS_COLLECTION_ID! 
+export interface RealTimeEventResponse {
+  events: string[];
+  payload: any;
+}

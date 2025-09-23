@@ -32,6 +32,19 @@ export default function TabsLayout() {
         },
       }}
       
+        />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: "Explore",
+          tabBarIcon: ({color, focused}) => {
+            return focused ?( <AntDesign name="search1" size={24} color="blue" /> 
+            ):( 
+             <AntDesign name="search1" size={24} color="black" />
+          );
+        },
+      }}
+      
       />
       <Tabs.Screen
         name="notifications"
@@ -45,19 +58,7 @@ export default function TabsLayout() {
         },
       }}
       
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Explore",
-          tabBarIcon: ({color, focused}) => {
-            return focused ?( <AntDesign name="search1" size={24} color="black" /> 
-            ):( 
-             <AntDesign name="search1" size={24} color="black" />
-          );
-        },
-      }}
-      
+    
       />
        <Tabs.Screen
         name="add-event"

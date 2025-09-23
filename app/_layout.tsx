@@ -1,6 +1,7 @@
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { ReactNode, useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -25,7 +26,8 @@ function RouteGuard({ children }: { children: ReactNode }) {
  
 // RootLayout bileşeni: tüm uygulama yapısının ana layout'u
 export default function RootLayout() {
-  return (        // RouteGuard bileşeni ile içerik sarılıyor, böylece sadece yetkili kullanıcılar erişebilir
+  return (  // RouteGuard bileşeni ile içerik sarılıyor, böylece sadece yetkili kullanıcılar erişebilir
+    <GestureHandlerRootView style={{ flex: 1 }}>      
     <AuthProvider>
       <PaperProvider>
       <SafeAreaProvider>
@@ -37,6 +39,7 @@ export default function RootLayout() {
       </SafeAreaProvider>
       </PaperProvider>
     </AuthProvider> 
+    </GestureHandlerRootView>
 
   );
 }
