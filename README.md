@@ -278,10 +278,10 @@ Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
 
 ## 👨‍💻 Geliştirici
 
-**[Adınız]**
+**[Mert Kıyak]**
 
 - GitHub: [@mertkiyak](https://github.com/mertkiyak)
-- LinkedIn: [linkedin.com/in/kullaniciadi](https://linkedin.com/in/mert-kiyak)
+- LinkedIn: [linkedin.com/in/mert-kiyak](https://linkedin.com/in/mert-kiyak)
 - E-posta: mertkiyak09@gmail.com
 
 ---
