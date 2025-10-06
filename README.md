@@ -70,7 +70,7 @@
 ### 1. Projeyi Klonlayın
 
 ```bash
-git clone https://github.com/kullaniciadi/eventflow.git
+git clone https://github.com/mertkiyak/eventflow.git
 cd eventflow
 ```
 
@@ -280,26 +280,17 @@ Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
 
 **[Adınız]**
 
-- GitHub: [@kullaniciadi](https://github.com/kullaniciadi)
-- LinkedIn: [linkedin.com/in/kullaniciadi](https://linkedin.com/in/kullaniciadi)
-- E-posta: ornek@email.com
-
----
-
-## 🙏 Teşekkürler
-
-- [Appwrite](https://appwrite.io) - Harika BaaS platformu
-- [Expo](https://expo.dev) - React Native geliştirme deneyimi
-- [React Native Community](https://reactnative.dev) - Muhteşem topluluk desteği
+- GitHub: [@mertkiyak](https://github.com/mertkiyak)
+- LinkedIn: [linkedin.com/in/kullaniciadi](https://linkedin.com/in/mert-kiyak)
+- E-posta: mertkiyak09@gmail.com
 
 ---
 
 ## 📞 İletişim
 
 Sorularınız veya önerileriniz için:
-- Issue açın: [GitHub Issues](https://github.com/kullaniciadi/eventflow/issues)
-- E-posta gönderin: ornek@email.com
-- Twitter'da etiketleyin: [@kullaniciadi](https://twitter.com/kullaniciadi)
+- Issue açın: [GitHub Issues](https://github.com/mertkiyak/eventflow/issues)
+- E-posta gönderin: mertkiyak09@gmail.com
 
 ---
 
