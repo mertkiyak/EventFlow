@@ -9,7 +9,7 @@ export interface Events  extends Models.Document {
   frequency: string;
   last_completed: string;
   created_at: string;
-
+image_url: string;
 }
 
 export interface EventCompletion extends Models.Document {  

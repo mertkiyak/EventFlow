@@ -24,6 +24,13 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Etkinlik görseli eklemek için galerinize erişmemiz gerekiyor.",
+          "cameraPermission": "Etkinlik fotoğrafı çekmek için kameranıza erişmemiz gerekiyor."
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",

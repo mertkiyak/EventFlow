@@ -1,4 +1,6 @@
-import { Account, Client, Databases } from "react-native-appwrite";
+import { Account, Client, Databases, Storage } from "react-native-appwrite";
+
+
 
 export const client = new Client()
 .setEndpoint(process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!)
@@ -15,3 +17,9 @@ export interface RealTimeEventResponse {
   events: string[];
   payload: any;
 }
+
+export const BUCKET_ID = "68e3150d000f8d7abf62"; // Appwrite'tan alacaksınız
+export const storage = new Storage(client);
+
+// lib/appwrite.ts
+export const PROJECT_ID = "687fa279001603a29450"; // Appwrite console'dan alın
