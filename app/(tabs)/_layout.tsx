@@ -1,7 +1,7 @@
 import AntDesign from '@expo/vector-icons/AntDesign';
-import Entypo from '@expo/vector-icons/Entypo';
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Octicons from '@expo/vector-icons/Octicons';
 import { Tabs } from "expo-router";
 export default function TabsLayout() {
   return (
@@ -25,53 +25,65 @@ export default function TabsLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({color, focused}) => {
-            return focused ?( <Entypo name="home" size={24} color={focused ? "blue" : color} />
+            return focused ?(  <Octicons name="home" size={24} color="blue" />
             ):( 
-              <Feather name="home" size={24} color="black" />
+              <Octicons name="home" size={24} color="black" />
           );
         },
       }}
       
         />
+        
       <Tabs.Screen
         name="explore"
         options={{
           title: "Explore",
           tabBarIcon: ({color, focused}) => {
-            return focused ?( <AntDesign name="search1" size={24} color="blue" /> 
+            return focused ?( <Feather name="search" size={24} color="blue" />
             ):( 
-             <AntDesign name="search1" size={24} color="black" />
+              <Feather name="search" size={24} color="black" />
           );
         },
       }}
       
-      />
-      <Tabs.Screen
-        name="notifications"
+/><Tabs.Screen
+        name="add-event"
         options={{
-          title: "Notifications",
+          title: "Add Event",
           tabBarIcon: ({color, focused}) => {
-            return focused ?( <Ionicons name="notifications" size={24} color={focused ? "blue" : color} />
+            return focused ?( <Ionicons name="add" size={24} color="blue" />  
             ):( 
-              <Ionicons name="notifications-outline" size={24} color="black" />
+             <AntDesign name="plus" size={24} color="black" />
+          );
+        },
+      }}
+       />
+      <Tabs.Screen
+        name="message"
+        options={{
+          title: "Messages",
+          tabBarIcon: ({color, focused}) => {
+            return focused ?( <Feather name="message-circle" size={24} color="blue" />
+            ):( 
+              <Feather name="message-circle" size={24} color="black" />
           );
         },
       }}
       
     
       />
-       <Tabs.Screen
-        name="add-event"
+       
+      <Tabs.Screen
+        name="profile"
         options={{
-          title: "Add Event",
+          title: "Profile",
           tabBarIcon: ({color, focused}) => {
-            return focused ?( <Ionicons name="add" size={24} color="black" />  
+            return focused ?( <Feather name="user" size={24} color="blue" /> 
             ):( 
-             <Ionicons name="add" size={24} color="black" />
+             <Feather name="user" size={24} color="black" />
           );
         },
       }}
-      
       />
       <Tabs.Screen name="login" options={{ title: "Login" }} />
     </Tabs>
