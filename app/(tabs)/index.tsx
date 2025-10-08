@@ -695,8 +695,6 @@
 // });
 
 
-
-
 import {
   client,
   COLLECTION_ID,
@@ -709,7 +707,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Query } from "react-native-appwrite";
-import { Button, IconButton, Text } from "react-native-paper";
+// YENİ EKLENDİ: Modal ve Portal import edildi
+import { Button, IconButton, Modal, Portal, Text } from "react-native-paper";
 import { Events } from "../../types/database.type";
 
 export default function Index() {
@@ -717,6 +716,10 @@ export default function Index() {
   const [myEvents, setMyEvents] = useState<Events[]>([]);
   const [recommendedEvents, setRecommendedEvents] = useState<Events[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<Events[]>([]);
+
+  // YENİ EKLENDİ: Modal yönetimi için state'ler
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Events | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -773,7 +776,7 @@ export default function Index() {
       );
       setUpcomingEvents(upcomingResponse.documents as Events[]);
 
-      // İlgi alanlarına göre etkinlikler (şimdilik diğer kullanıcıların etkinlikleri)
+      // İlgi alanlarına göre etkinlikler (diğer kullanıcıların etkinlikleri)
       const recommendedResponse = await databases.listDocuments(
         DATABASE_ID,
         COLLECTION_ID,
@@ -790,23 +793,34 @@ export default function Index() {
   };
 
   const handleJoinEvent = (eventId: string) => {
-    // Etkinliğe katılma işlemi
     console.log("Joining event:", eventId);
+    // Burada etkinliğe katılma API çağrısı yapılabilir
+    handleCloseModal(); // Katıldıktan sonra modal'ı kapat
+  };
+  
+  // YENİ EKLENDİ: Modal'ı açan fonksiyon
+  const handleCardPress = (event: Events) => {
+    setSelectedEvent(event);
+    setIsModalVisible(true);
   };
 
+  // YENİ EKLENDİ: Modal'ı kapatan fonksiyon
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
+    setSelectedEvent(null);
+  };
+
+
+  // Bu fonksiyonlar aynı kalıyor
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
-                    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-    
+    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
     const dayName = days[date.getDay()];
     const day = date.getDate();
     const month = months[date.getMonth()];
-    
     return `${dayName}, ${day} ${month}`;
   };
-
   const formatTime = (dateString: string): string => {
     const date = new Date(dateString);
     const hours = date.getHours().toString().padStart(2, '0');
@@ -814,9 +828,9 @@ export default function Index() {
     return `${hours}:${minutes}`;
   };
 
-  const EventCard = ({ event, showJoinButton = true }: { event: Events; showJoinButton?: boolean }) => (
-    <TouchableOpacity style={styles.card} activeOpacity={0.8}>
-      {/* Event Image */}
+  // GÜNCELLENDİ: EventCard artık onCardPress prop'u alıyor
+  const EventCard = ({ event, showJoinButton = true, onCardPress }: { event: Events; showJoinButton?: boolean, onCardPress: (event: Events) => void }) => (
+    <TouchableOpacity style={styles.card} activeOpacity={0.8} onPress={() => onCardPress(event)}>
       <Image
         source={{ 
           uri: event.image_url || 'https://via.placeholder.com/400x200?text=Etkinlik+Görseli'
@@ -828,35 +842,21 @@ export default function Index() {
         <Text style={styles.eventTitle} numberOfLines={2}>
           {event.title}
         </Text>
-
-        {/* Date */}
         <View style={styles.infoRow}>
           <MaterialCommunityIcons name="calendar" size={16} color="#9CA3AF" />
           <Text style={styles.infoText}>{formatDate(event.event_date)}</Text>
         </View>
-
-        {/* Time */}
         <View style={styles.infoRow}>
           <MaterialCommunityIcons name="clock-outline" size={16} color="#9CA3AF" />
           <Text style={styles.infoText}>{formatTime(event.event_date)}</Text>
         </View>
-
-        {/* Location */}
         <View style={styles.infoRow}>
           <MaterialCommunityIcons name="map-marker" size={16} color="#9CA3AF" />
           <Text style={styles.infoText} numberOfLines={1}>
             {event.location || "Konum belirtilmemiş"}
           </Text>
         </View>
-
-        {/* Description (optional) */}
-        {event.description && (
-          <Text style={styles.description} numberOfLines={2}>
-            {event.description}
-          </Text>
-        )}
-
-        {/* Join Button */}
+        {/* Katıl butonu artık kartın içinde ve tıklamayı engellemiyor */}
         {showJoinButton && (
           <Button
             mode="contained"
@@ -880,16 +880,8 @@ export default function Index() {
           Ana Sayfa
         </Text>
         <View style={styles.headerActions}>
-          <IconButton
-            icon="bell-outline"
-            size={24}
-            onPress={() => console.log("Notifications")}
-          />
-          <IconButton
-            icon="logout"
-            size={24}
-            onPress={signOut}
-          />
+          <IconButton icon="bell-outline" size={24} onPress={() => console.log("Notifications")} />
+          <IconButton icon="logout" size={24} onPress={signOut} />
         </View>
       </View>
 
@@ -913,7 +905,8 @@ export default function Index() {
             >
               {myEvents.map((event) => (
                 <View key={event.$id} style={styles.horizontalCard}>
-                  <EventCard event={event} showJoinButton={false} />
+                  {/* GÜNCELLENDİ: onCardPress prop'u eklendi */}
+                  <EventCard event={event} showJoinButton={false} onCardPress={handleCardPress} />
                 </View>
               ))}
             </ScrollView>
@@ -930,7 +923,8 @@ export default function Index() {
             </View>
           ) : (
             recommendedEvents.map((event) => (
-              <EventCard key={event.$id} event={event} />
+              // GÜNCELLENDİ: onCardPress prop'u eklendi
+              <EventCard key={event.$id} event={event} onCardPress={handleCardPress} />
             ))
           )}
         </View>
@@ -945,15 +939,71 @@ export default function Index() {
             </View>
           ) : (
             upcomingEvents.map((event) => (
-              <EventCard key={event.$id} event={event} showJoinButton={false} />
+              // GÜNCELLENDİ: onCardPress prop'u eklendi
+              <EventCard key={event.$id} event={event} showJoinButton={false} onCardPress={handleCardPress} />
             ))
           )}
         </View>
       </ScrollView>
+
+      {/* YENİ EKLENDİ: Etkinlik Detay Modal'ı */}
+      <Portal>
+        <Modal
+          visible={isModalVisible}
+          onDismiss={handleCloseModal}
+          contentContainerStyle={styles.modalContainer}
+        >
+          {selectedEvent && (
+            <ScrollView>
+              <Image 
+                source={{ uri: selectedEvent.image_url || 'https://via.placeholder.com/400x200?text=Etkinlik+Görseli' }} 
+                style={styles.modalImage} 
+              />
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>{selectedEvent.title}</Text>
+                
+                <View style={styles.infoRow}>
+                  <MaterialCommunityIcons name="calendar" size={18} color="#9CA3AF" />
+                  <Text style={styles.modalInfoText}>{formatDate(selectedEvent.event_date)}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <MaterialCommunityIcons name="clock-outline" size={18} color="#9CA3AF" />
+                  <Text style={styles.modalInfoText}>{formatTime(selectedEvent.event_date)}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <MaterialCommunityIcons name="map-marker" size={18} color="#9CA3AF" />
+                  <Text style={styles.modalInfoText}>{selectedEvent.location}</Text>
+                </View>
+
+                <Text style={styles.modalDescriptionTitle}>Açıklama</Text>
+                <Text style={styles.modalDescription}>{selectedEvent.description || "Açıklama bulunmuyor."}</Text>
+                
+                <Button
+                  mode="contained"
+                  onPress={() => handleJoinEvent(selectedEvent.$id)}
+                  style={styles.joinButton}
+                  buttonColor="#3B82F6"
+                >
+                  Etkinliğe Katıl
+                </Button>
+                 <Button
+                  mode="text"
+                  onPress={handleCloseModal}
+                  style={styles.modalCloseButton}
+                  textColor="#9CA3AF"
+                >
+                  Kapat
+                </Button>
+              </View>
+            </ScrollView>
+          )}
+        </Modal>
+      </Portal>
     </View>
   );
 }
 
+// Stiller güncellendi
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1043,6 +1093,49 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: "#6B7280",
+    marginTop: 8,
+  },
+  // YENİ MODAL STİLLERİ
+  modalContainer: {
+    backgroundColor: '#1F1F1F',
+    margin: 20,
+    borderRadius: 16,
+    maxHeight: '85%',
+  },
+  modalImage: {
+    width: '100%',
+    height: 200,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  modalInfoText: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    marginLeft: 10,
+  },
+  modalDescriptionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#D1D5DB',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalCloseButton: {
     marginTop: 8,
   },
 });

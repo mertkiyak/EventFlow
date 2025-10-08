@@ -11,6 +11,7 @@ function RouteGuard({ children }: { children: ReactNode }) {
   const{user, isLoadingUser} = useAuth();
   const segments = useSegments();
 
+  
   useEffect(() => {
     const inAuthGroup = segments[0] ==="auth"
     if (!user  && !inAuthGroup && !isLoadingUser) {  
