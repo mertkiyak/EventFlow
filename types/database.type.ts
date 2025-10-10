@@ -17,3 +17,18 @@ export interface EventCompletion extends Models.Document {
   user_id: string;
   completed_at: string;
 }
+
+
+export interface UserProfile {
+  $id: string;
+  name: string;
+  age: number;
+  location: string;
+  bio: string;
+  interests: string[];
+  avatarUrl: string;
+  followers: number;
+  following: number;
+  $createdAt: string;
+  $updatedAt: string;
+}
