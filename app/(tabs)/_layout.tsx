@@ -102,12 +102,15 @@ export default function TabLayout() {
       
       <Tabs
         screenOptions={{
+          // Header'ı gizle
+          headerShown: false, // BU SATIRI EKLEDİM
+          
           // Tab bar ayarları
-          tabBarActiveTintColor: '#38e07b', // Aktif tab rengi (yeşil)
+          tabBarActiveTintColor: '#386ae0ff', // Aktif tab rengi (yeşil)
           tabBarInactiveTintColor: '#6B7280', // Pasif tab rengi (gri)
           tabBarStyle: {
-            backgroundColor: '#111714', // Alt bar arka plan rengi (siyah)
-            borderTopColor: '#1C2620', // Üst border rengi
+            backgroundColor: '#242424ff', // Alt bar arka plan rengi (siyah)
+            borderTopColor: '#242424ff', // Üst border rengi
             borderTopWidth: 1,
             height: Platform.OS === 'ios' ? 88 : 65,
             paddingBottom: Platform.OS === 'ios' ? 28 : 8,
@@ -117,18 +120,6 @@ export default function TabLayout() {
             fontSize: 12,
             fontWeight: '600',
           },
-          // Header ayarları
-          headerStyle: {
-            backgroundColor: '#111714', // Üst bar arka plan rengi (siyah)
-            elevation: 0, // Android gölge kaldır
-            shadowOpacity: 0, // iOS gölge kaldır
-          },
-          headerTintColor: '#fff', // Header metin rengi (beyaz)
-          headerTitleStyle: {
-            fontWeight: 'bold',
-            fontSize: 20,
-          },
-          headerShadowVisible: false, // Header gölgesi kaldır
         }}>
         
         {/* Home Tab */}
@@ -136,7 +127,6 @@ export default function TabLayout() {
           name="index"
           options={{
             title: 'Home',
-            headerTitle: 'Ana Sayfa',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="home" size={size} color={color} />
             ),
@@ -148,7 +138,6 @@ export default function TabLayout() {
           name="explore"
           options={{
             title: 'Explore',
-            headerTitle: 'Keşfet',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="compass" size={size} color={color} />
             ),
@@ -160,7 +149,6 @@ export default function TabLayout() {
           name="add-event"
           options={{
             title: 'Add Event',
-            headerTitle: 'Etkinlik Ekle',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="add-circle" size={size} color={color} />
             ),
@@ -172,7 +160,6 @@ export default function TabLayout() {
           name="message"
           options={{
             title: 'Messages',
-            headerTitle: 'Mesajlar',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="chatbubbles" size={size} color={color} />
             ),
@@ -184,8 +171,7 @@ export default function TabLayout() {
           name="profile"
           options={{
             title: 'Profile',
-            headerTitle: 'Profil',
-            headerShown: false, // Profile'da custom header var
+            headerShown: false, // Profile'da zaten yoktu
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person" size={size} color={color} />
             ),

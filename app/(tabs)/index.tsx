@@ -881,7 +881,7 @@ export default function Index() {
         </Text>
         <View style={styles.headerActions}>
           <IconButton icon="bell-outline" size={24} onPress={() => console.log("Notifications")} />
-          <IconButton icon="logout" size={24} onPress={signOut} />
+         
         </View>
       </View>
 

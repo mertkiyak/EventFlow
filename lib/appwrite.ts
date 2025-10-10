@@ -1,4 +1,4 @@
-import { Account, Client, Databases, Storage } from "react-native-appwrite";
+import { Account, Client, Databases, ID, Query, Storage } from "react-native-appwrite";
 
 
 
@@ -9,6 +9,7 @@ export const client = new Client()
 
 export const account = new Account(client)
 export const databases = new Databases(client)
+export const storage = new Storage(client);
 
 export const DATABASE_ID = process.env.EXPO_PUBLIC_DB_ID!  // Database ID
 export const COLLECTION_ID = process.env.EXPO_PUBLIC_DB_COLLECTION_ID!  // Collection ID;
@@ -19,7 +20,17 @@ export interface RealTimeEventResponse {
 }
 
 export const BUCKET_ID = "68e3150d000f8d7abf62"; // Appwrite'tan alacaksınız
-export const storage = new Storage(client);
+
 
 // lib/appwrite.ts
 export const PROJECT_ID = "687fa279001603a29450"; // Appwrite console'dan alın
+
+
+
+export const MESSAGES_COLLECTION_ID = '68e85ad500181492effc'; // Mesajlar koleksiyonu ID'si
+export const CONVERSATIONS_COLLECTION_ID = '68e85bb7002adccc2ca7'; // Konuşmalar koleksiyonu ID'si
+export const USERS_COLLECTION_ID = '68e85c200010d15a4770'; // Kullanıcılar koleksiyonu ID'si
+
+export { ID, Query };
+
+  export type { Models } from 'react-native-appwrite';
