@@ -61,33 +61,7 @@ export default function ProfileScreen() {
     }
   }, [user]);
 
-  // const fetchUserProfile = async () => {
-  //   if (!user) return;
 
-  //   try {
-  //     // Kullanıcı profilini çek
-  //     const response = await databases.getDocument(
-  //       DATABASE_ID,
-  //       USERS_COLLECTION_ID,
-  //       user.$id
-  //     );
-
-  //     setProfile({
-  //       name: response.name || user.name || "Kullanıcı",
-  //       age: response.age || 24,
-  //       location: response.location || "İstanbul",
-  //       bio: response.bio || "",
-  //       interests: response.interests || [],
-  //       avatarUrl: response.avatarUrl || "https://via.placeholder.com/200x200?text=Avatar",
-  //     });
-      
-  //     setFollowers(response.followers || 0);
-  //     setFollowing(response.following || 0);
-  //   } catch (error) {
-  //     console.error("Error fetching user profile:", error);
-  //     // Profil yoksa default değerlerle devam et
-  //   }
-  // };
   const fetchUserProfile = async () => {
   if (!user) return;
 
@@ -164,32 +138,6 @@ const createUserProfile = async () => {
   }
 };
 
-  // const handleSaveProfile = async (updatedProfile: ProfileData) => {
-  //   if (!user) return;
-
-  //   try {
-  //     await databases.updateDocument(
-  //       DATABASE_ID,
-  //       USERS_COLLECTION_ID,
-  //       user.$id,
-  //       {
-  //         name: updatedProfile.name,
-  //         age: updatedProfile.age,
-  //         location: updatedProfile.location,
-  //         bio: updatedProfile.bio,
-  //         interests: updatedProfile.interests,
-  //         avatarUrl: updatedProfile.avatarUrl,
-  //       }
-  //     );
-
-  //     setProfile(updatedProfile);
-  //     setIsEditProfileModalVisible(false);
-  //     Alert.alert("Başarılı", "Profiliniz güncellendi");
-  //   } catch (error) {
-  //     console.error("Error updating profile:", error);
-  //     Alert.alert("Hata", "Profil güncellenirken bir hata oluştu");
-  //   }
-  // };
   const handleSaveProfile = async (updatedProfile: ProfileData) => {
   if (!user) return;
 
@@ -607,7 +555,7 @@ const styles = StyleSheet.create({
   eventCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#6d6d6dff",
+    backgroundColor: "#4d4c4cff",
     borderRadius: 12,
     padding: 12,
     gap: 12,
@@ -616,7 +564,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: "#242524ff",
+    backgroundColor: "#272727ff",
   },
   eventInfo: {
     flex: 1,
@@ -628,7 +576,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   eventDate: {
-    color: "#9eb7a8",
+    color: "#bababaff",
     fontSize: 14,
   },
   eventActions: {

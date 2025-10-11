@@ -1,700 +1,3 @@
-
-// import {
-//   client,
-//   COLLECTION_ID,
-//   COMPLETIONS_COLLECTION_ID,
-//   DATABASE_ID,
-//   databases,
-//   RealTimeEventResponse,
-// } from "@/lib/appwrite";
-// import { useAuth } from "@/lib/auth-context";
-// import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-// import { useEffect, useRef, useState } from "react";
-// import { ScrollView, StyleSheet, View } from "react-native";
-// import { ID, Query } from "react-native-appwrite";
-// import { Swipeable } from "react-native-gesture-handler";
-// import { Button, Surface, Text } from "react-native-paper";
-// import { EventCompletion, Events } from "../../types/database.type";
-
-// export default function Index() {
-//   const { signOut, user } = useAuth();
-//   const [events, setEvents] = useState<Events[]>([]);
-//   const [completedEvents, setCompletedEvents] = useState<string[]>([]);
-
-//   const swipeableRefs = useRef<{ [key: string]: Swipeable | null }>({});
-
-//   useEffect(() => {
-//     if (user) {
-//       const eventsChannel = `databases.${DATABASE_ID}.collections.${COLLECTION_ID}.documents`;
-//       const eventSubscription = client.subscribe(
-//         eventsChannel,
-//         (response: RealTimeEventResponse) => {
-//           if (
-//             response.events.includes(
-//               "databases.*.collections.*.documents.*.create"
-//             ) ||
-//             response.events.includes(
-//               "databases.*.collections.*.documents.*.update"
-//             ) ||
-//             response.events.includes(
-//               "databases.*.collections.*.documents.*.delete"
-//             )
-//           ) {
-//             fetchEvents();
-//           }
-//         }
-//       );
-
-//       const completionsChannel = `databases.${DATABASE_ID}.collections.${COMPLETIONS_COLLECTION_ID}.documents`;
-//       const completionSubscription = client.subscribe(
-//         completionsChannel,
-//         (response: RealTimeEventResponse) => {
-//           if (
-//             response.events.includes(
-//               "databases.*.collections.*.documents.*.create"
-//             )
-//           ) {
-//             fetchTodayCompletions();
-//           }
-//         }
-//       );
-
-//       fetchEvents();
-//       fetchTodayCompletions();
-//       return () => {
-//         eventSubscription();
-//         completionSubscription();
-//       };
-//     }
-//   }, [user]);
-
-//   const fetchEvents = async () => {
-//     if (!user) return;
-    
-//     try {
-//       const response = await databases.listDocuments(
-//         DATABASE_ID,
-//         COLLECTION_ID,
-//         [Query.equal("user_id", user.$id)]
-//       );
-//       setEvents(response.documents as Events[]);
-//     } catch (error) {
-//       console.error("Error fetching events:", error);
-//     }
-//   };
-
-//   const fetchTodayCompletions = async () => {
-//     if (!user) return;
-    
-//     try {
-//       const today = new Date();
-//       today.setHours(0, 0, 0, 0);
-//       const response = await databases.listDocuments(
-//         DATABASE_ID,
-//         COMPLETIONS_COLLECTION_ID,
-//         [
-//           Query.equal("user_id", user.$id),
-//           Query.greaterThan("completed_at", today.toISOString())
-//         ]
-//       );
-
-//       const completions = response.documents as EventCompletion[];
-//       setCompletedEvents(completions.map((c) => c.event_id));
-//     } catch (error) {
-//       console.error("Error fetching completions:", error);
-//     }
-//   };
-
-//   const handleDeleteEvent = async (id: string) => {
-//     try {
-//       await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
-//     } catch (error) {
-//       console.error("Error deleting event:", error);
-//     }
-//   };
-
-//   const handleCompleteEvent = async (id: string) => {
-//     if (!user || completedEvents?.includes(id)) return;
-    
-//     try {
-//       const currentDate = new Date().toISOString();
-//       await databases.createDocument(
-//         DATABASE_ID,
-//         COMPLETIONS_COLLECTION_ID,
-//         ID.unique(),
-//         {
-//           event_id: id,
-//           user_id: user.$id,
-//           completed_at: currentDate,
-//         }
-//       );
-
-//       const event = events?.find((h) => h.$id === id);
-//       if (!event) return;
-      
-//       await databases.updateDocument(DATABASE_ID, COLLECTION_ID, id, {
-//         streak_count: event.streak_count + 1,
-//         last_completed: currentDate,
-//       });
-//     } catch (error) {
-//       console.error("Error completing event:", error);
-//     }
-//   };
-
-//   const isEventCompleted = (eventId: string) => completedEvents?.includes(eventId);
-
-//   const renderLeftActions = (eventId: string) => (
-//     <View style={styles.swipeActionLeft}>
-//       {isEventCompleted(eventId) ? (
-//         <Text style={{color:"#fff", fontWeight:"bold"}}>Completed</Text>
-//       ) : (
-//        <MaterialCommunityIcons
-//         name="check-circle-outline"
-//         size={32}
-//         color="#fff" 
-//       />
-//       )}
-      
-//     </View>
-//   );
-
-//   const renderRightActions = (eventId: string) => (
-//     <View style={styles.swipeActionRight}>
-//         <MaterialCommunityIcons
-//           name="trash-can-outline"
-//           size={32}
-//           color="#fff" 
-//         />
-//     </View>
-//   );
-
-//   return (
-//     <View style={styles.container}>
-//       <View style={styles.header}>
-//         <Text variant="headlineSmall" style={styles.title}>
-//           Welcome
-//         </Text>
-//         <Button mode="text" onPress={signOut} icon={"logout"}>
-//           Sign Out
-//         </Button>
-//       </View>
-
-//       <ScrollView showsVerticalScrollIndicator={false}>
-//         {events?.length === 0 ? (
-//           <View style={styles.emptyState}>
-//             <Text style={styles.emptyStateText}>No events found.</Text>
-//           </View>
-//         ) : (
-//           events?.map((event, key) => (
-//             <Swipeable
-//               ref={(ref) => {
-//                 swipeableRefs.current[event.$id] = ref;
-//               }}
-//               key={key}
-//               overshootLeft={false}
-//               overshootRight={false}
-//               renderLeftActions={() => renderLeftActions(event.$id)}
-//               renderRightActions={() => renderRightActions(event.$id)}
-//               onSwipeableOpen={(direction) => {
-//                 if (direction === "right") {
-//                   handleDeleteEvent(event.$id);
-//                   swipeableRefs.current[event.$id]?.close();
-//                 } else if (direction === "left") {
-//                   handleCompleteEvent(event.$id);
-//                   swipeableRefs.current[event.$id]?.close();
-//                 }
-//               }}
-//             >
-//               <Surface
-//                 style={[
-//                   styles.card,
-//                   isEventCompleted(event.$id) && styles.cardCompleted,
-//                 ]}
-//                 elevation={0}
-//               >
-//                 <View style={styles.cardContent}>
-//                   <Text style={styles.cardTitle}>{event.title}</Text>
-//                   <Text style={styles.cardDescription}>
-//                     {event.description}
-//                   </Text>
-//                   <View style={styles.cardFooter}>
-//                     <View style={styles.frequencyBadge}>
-//                       <MaterialCommunityIcons
-//                         name="fire"
-//                         size={14}
-//                         color="orange"
-//                       />
-//                       <Text style={styles.frequencyText}>
-//                         {event.frequency.charAt(0).toUpperCase() +
-//                           event.frequency.slice(1)}
-//                       </Text>
-//                     </View>
-//                     <Text style={styles.streakText}>
-//                       Streak Count: {event.streak_count} day streak
-//                     </Text>
-//                   </View>
-//                 </View>
-//               </Surface>
-//             </Swipeable>
-//           ))
-//         )}
-//       </ScrollView>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     padding: 16,
-//     backgroundColor: "#f5f5f5",
-//   },
-//   header: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//     marginBottom: 16,
-//   },
-//   title: {
-//     fontWeight: "bold",
-//     fontSize: 24,
-//   },
-//   card: {
-//     marginBottom: 8,
-//     borderRadius: 8,
-//     backgroundColor: "#f3dfffff",
-//     padding: 16,
-//     shadowColor: "#000",
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 4,
-//     elevation: 4,
-//   },
-//   cardCompleted: {
-//     backgroundColor: "#c8ffa3ff",
-//   },
-//   cardContent: {
-//     padding: 5,
-//   },
-//   cardTitle: {
-//     fontSize: 18,
-//     fontWeight: "bold",
-//     marginBottom: 8,
-//     color: "#22223b",
-//   },
-//   cardDescription: {
-//     fontSize: 16,
-//     marginBottom: 4,
-//     color: "#6c6c80",
-//   },
-//   cardFooter: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//   },
-//   frequencyBadge: {
-//     backgroundColor: "#ede7f6",
-//     borderRadius: 8,
-//     padding: 8,
-//     paddingHorizontal: 12,
-//     paddingVertical: 4,
-//     flexDirection: "row",
-//     alignItems: "center",
-//   },
-//   frequencyText: {
-//     fontSize: 14,
-//     color: "#7c4bff",
-//     fontWeight: "bold",
-//     marginLeft: 4,
-//   },
-//   streakText: {
-//     marginLeft: 8,
-//     fontSize: 14,
-//     color: "#ffea00ff",
-//   },
-//   emptyState: {
-//     flex: 1,
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   emptyStateText: {
-//     fontSize: 18,
-//     color: "#6c6c80",
-//   },
-//   swipeActionLeft: {
-//     backgroundColor: "green",
-//     justifyContent: "center",
-//     alignItems: "flex-start",
-//     paddingHorizontal: 20,
-//     flex: 1,
-//     borderRadius: 18,
-//     marginBottom: 18,
-//     marginTop: 2,
-//     paddingLeft: 16,
-//   },
-//   swipeActionRight: {
-//     backgroundColor: "red",
-//     justifyContent: "center",
-//     alignItems: "flex-end",
-//     paddingHorizontal: 20,
-//     flex: 1,
-//     borderRadius: 18,
-//     marginBottom: 18,
-//     marginTop: 2,
-//     paddingRight: 16,
-//   },
-// });
-
-
-
-
-// import {
-//   client,
-//   COLLECTION_ID,
-//   COMPLETIONS_COLLECTION_ID,
-//   DATABASE_ID,
-//   databases,
-//   RealTimeEventResponse,
-// } from "@/lib/appwrite";
-// import { useAuth } from "@/lib/auth-context";
-// import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-// import { useEffect, useRef, useState } from "react";
-// import { ScrollView, StyleSheet, View } from "react-native";
-// import { ID, Query } from "react-native-appwrite";
-// import { Swipeable } from "react-native-gesture-handler";
-// import { Button, Surface, Text } from "react-native-paper";
-// import { EventCompletion, Events } from "../../types/database.type";
-
-// export default function Index() {
-//   const { signOut, user } = useAuth();
-//   const [events, setEvents] = useState<Events[]>([]);
-//   const [completedEvents, setCompletedEvents] = useState<string[]>([]);
-
-//   const swipeableRefs = useRef<{ [key: string]: Swipeable | null }>({});
-
-//   useEffect(() => {
-//     if (user) {
-//       const eventsChannel = `databases.${DATABASE_ID}.collections.${COLLECTION_ID}.documents`;
-//       const eventSubscription = client.subscribe(
-//         eventsChannel,
-//         (response: RealTimeEventResponse) => {
-//           if (
-//             response.events.includes(
-//               "databases.*.collections.*.documents.*.create"
-//             ) ||
-//             response.events.includes(
-//               "databases.*.collections.*.documents.*.update"
-//             ) ||
-//             response.events.includes(
-//               "databases.*.collections.*.documents.*.delete"
-//             )
-//           ) {
-//             fetchEvents();
-//           }
-//         }
-//       );
-
-//       const completionsChannel = `databases.${DATABASE_ID}.collections.${COMPLETIONS_COLLECTION_ID}.documents`;
-//       const completionSubscription = client.subscribe(
-//         completionsChannel,
-//         (response: RealTimeEventResponse) => {
-//           if (
-//             response.events.includes(
-//               "databases.*.collections.*.documents.*.create"
-//             )
-//           ) {
-//             fetchTodayCompletions();
-//           }
-//         }
-//       );
-
-//       fetchEvents();
-//       fetchTodayCompletions();
-//       return () => {
-//         eventSubscription();
-//         completionSubscription();
-//       };
-//     }
-//   }, [user]);
-
-//   const fetchEvents = async () => {
-//     if (!user) return;
-    
-//     try {
-//       const response = await databases.listDocuments(
-//         DATABASE_ID,
-//         COLLECTION_ID,
-//         [Query.equal("user_id", user.$id)]
-//       );
-//       setEvents(response.documents as Events[]);
-//     } catch (error) {
-//       console.error("Error fetching events:", error);
-//     }
-//   };
-
-//   const fetchTodayCompletions = async () => {
-//     if (!user) return;
-    
-//     try {
-//       const today = new Date();
-//       today.setHours(0, 0, 0, 0);
-//       const response = await databases.listDocuments(
-//         DATABASE_ID,
-//         COMPLETIONS_COLLECTION_ID,
-//         [
-//           Query.equal("user_id", user.$id),
-//           Query.greaterThan("completed_at", today.toISOString())
-//         ]
-//       );
-
-//       const completions = response.documents as EventCompletion[];
-//       setCompletedEvents(completions.map((c) => c.event_id));
-//     } catch (error) {
-//       console.error("Error fetching completions:", error);
-//     }
-//   };
-
-//   const handleDeleteEvent = async (id: string) => {
-//     try {
-//       await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
-//     } catch (error) {
-//       console.error("Error deleting event:", error);
-//     }
-//   };
-
-//   const handleCompleteEvent = async (id: string) => {
-//     if (!user || completedEvents?.includes(id)) return;
-    
-//     try {
-//       const currentDate = new Date().toISOString();
-//       await databases.createDocument(
-//         DATABASE_ID,
-//         COMPLETIONS_COLLECTION_ID,
-//         ID.unique(),
-//         {
-//           event_id: id,
-//           user_id: user.$id,
-//           completed_at: currentDate,
-//         }
-//       );
-
-//       const event = events?.find((h) => h.$id === id);
-//       if (!event) return;
-      
-//       await databases.updateDocument(DATABASE_ID, COLLECTION_ID, id, {
-//         streak_count: event.streak_count + 1,
-//         last_completed: currentDate,
-//       });
-//     } catch (error) {
-//       console.error("Error completing event:", error);
-//     }
-//   };
-
-//   const isEventCompleted = (eventId: string) => completedEvents?.includes(eventId);
-
-//   const renderLeftActions = (eventId: string) => (
-//     <View style={styles.swipeActionLeft}>
-//       {isEventCompleted(eventId) ? (
-//         <Text style={{color:"#fff", fontWeight:"bold"}}>Completed</Text>
-//       ) : (
-//        <MaterialCommunityIcons
-//         name="check-circle-outline"
-//         size={32}
-//         color="#fff" 
-//       />
-//       )}
-      
-//     </View>
-//   );
-
-//   const renderRightActions = (eventId: string) => (
-//     <View style={styles.swipeActionRight}>
-//         <MaterialCommunityIcons
-//           name="trash-can-outline"
-//           size={32}
-//           color="#fff" 
-//         />
-//     </View>
-//   );
-
-//   return (
-//     <View style={styles.container}>
-//       <View style={styles.header}>
-//         <Text variant="headlineSmall" style={styles.title}>
-//           Welcome
-//         </Text>
-//         <Button mode="text" onPress={signOut} icon={"logout"}>
-//           Sign Out
-//         </Button>
-//       </View>
-
-//       <ScrollView showsVerticalScrollIndicator={false}>
-//         {events?.length === 0 ? (
-//           <View style={styles.emptyState}>
-//             <Text style={styles.emptyStateText}>No events found.</Text>
-//           </View>
-//         ) : (
-//           events?.map((event, key) => (
-//             <Swipeable
-//               ref={(ref) => {
-//                 swipeableRefs.current[event.$id] = ref;
-//               }}
-//               key={key}
-//               overshootLeft={false}
-//               overshootRight={false}
-//               renderLeftActions={() => renderLeftActions(event.$id)}
-//               renderRightActions={() => renderRightActions(event.$id)}
-//               onSwipeableOpen={(direction) => {
-//                 if (direction === "right") {
-//                   handleDeleteEvent(event.$id);
-//                   swipeableRefs.current[event.$id]?.close();
-//                 } else if (direction === "left") {
-//                   handleCompleteEvent(event.$id);
-//                   swipeableRefs.current[event.$id]?.close();
-//                 }
-//               }}
-//             >
-//               <Surface
-//                 style={[
-//                   styles.card,
-//                   isEventCompleted(event.$id) && styles.cardCompleted,
-//                 ]}
-//                 elevation={0}
-//               >
-//                 <View style={styles.cardContent}>
-//                   <Text style={styles.cardTitle}>{event.title}</Text>
-//                   <Text style={styles.cardDescription}>
-//                     {event.description}
-//                   </Text>
-//                   <View style={styles.cardFooter}>
-//                     <View style={styles.frequencyBadge}>
-//                       <MaterialCommunityIcons
-//                         name="fire"
-//                         size={14}
-//                         color="orange"
-//                       />
-//                       <Text style={styles.frequencyText}>
-//                         {event.frequency.charAt(0).toUpperCase() +
-//                           event.frequency.slice(1)}
-//                       </Text>
-//                     </View>
-//                     <Text style={styles.streakText}>
-//                       Streak Count: {event.streak_count} day streak
-//                     </Text>
-//                   </View>
-//                 </View>
-//               </Surface>
-//             </Swipeable>
-//           ))
-//         )}
-//       </ScrollView>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     padding: 16,
-//     backgroundColor: "#f5f5f5",
-//   },
-//   header: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//     marginBottom: 16,
-//   },
-//   title: {
-//     fontWeight: "bold",
-//     fontSize: 24,
-//   },
-//   card: {
-//     marginBottom: 8,
-//     borderRadius: 8,
-//     backgroundColor: "#f3dfffff",
-//     padding: 16,
-//     shadowColor: "#000",
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 4,
-//     elevation: 4,
-//   },
-//   cardCompleted: {
-//     backgroundColor: "#c8ffa3ff",
-//   },
-//   cardContent: {
-//     padding: 5,
-//   },
-//   cardTitle: {
-//     fontSize: 18,
-//     fontWeight: "bold",
-//     marginBottom: 8,
-//     color: "#22223b",
-//   },
-//   cardDescription: {
-//     fontSize: 16,
-//     marginBottom: 4,
-//     color: "#6c6c80",
-//   },
-//   cardFooter: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//   },
-//   frequencyBadge: {
-//     backgroundColor: "#ede7f6",
-//     borderRadius: 8,
-//     padding: 8,
-//     paddingHorizontal: 12,
-//     paddingVertical: 4,
-//     flexDirection: "row",
-//     alignItems: "center",
-//   },
-//   frequencyText: {
-//     fontSize: 14,
-//     color: "#7c4bff",
-//     fontWeight: "bold",
-//     marginLeft: 4,
-//   },
-//   streakText: {
-//     marginLeft: 8,
-//     fontSize: 14,
-//     color: "#ffea00ff",
-//   },
-//   emptyState: {
-//     flex: 1,
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   emptyStateText: {
-//     fontSize: 18,
-//     color: "#6c6c80",
-//   },
-//   swipeActionLeft: {
-//     backgroundColor: "green",
-//     justifyContent: "center",
-//     alignItems: "flex-start",
-//     paddingHorizontal: 20,
-//     flex: 1,
-//     borderRadius: 18,
-//     marginBottom: 18,
-//     marginTop: 2,
-//     paddingLeft: 16,
-//   },
-//   swipeActionRight: {
-//     backgroundColor: "red",
-//     justifyContent: "center",
-//     alignItems: "flex-end",
-//     paddingHorizontal: 20,
-//     flex: 1,
-//     borderRadius: 18,
-//     marginBottom: 18,
-//     marginTop: 2,
-//     paddingRight: 16,
-//   },
-// });
-
-
 import {
   client,
   COLLECTION_ID,
@@ -705,21 +8,85 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEffect, useState } from "react";
-import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { FlatList, Image, SafeAreaView, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Query } from "react-native-appwrite";
-// YENİ EKLENDİ: Modal ve Portal import edildi
 import { Button, IconButton, Modal, Portal, Text } from "react-native-paper";
 import { Events } from "../../types/database.type";
+
+// Bildirim Tipi
+interface Notification {
+  id: string;
+  type: 'match' | 'event' | 'message';
+  name: string;
+  message: string;
+  time: string;
+  avatar: string;
+  isNew?: boolean;
+}
+
+// Demo Bildirimler
+const DEMO_NOTIFICATIONS: Notification[] = [
+  {
+    id: '1',
+    type: 'match',
+    name: 'Elif',
+    message: 'Yeni bir eşleşmen var!',
+    time: 'Şimdi',
+    avatar: 'https://i.pravatar.cc/150?img=1',
+    isNew: true,
+  },
+  {
+    id: '2',
+    type: 'event',
+    name: 'Yaz Kampı',
+    message: 'Etkinlik başladı!',
+    time: '1s önce',
+    avatar: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=150',
+  },
+  {
+    id: '3',
+    type: 'message',
+    name: 'Mehmet',
+    message: 'Yeni mesajın var!',
+    time: '5s önce',
+    avatar: 'https://i.pravatar.cc/150?img=12',
+  },
+  {
+    id: '4',
+    type: 'match',
+    name: 'Ayşe',
+    message: 'Yeni bir eşleşmen var!',
+    time: '1g önce',
+    avatar: 'https://i.pravatar.cc/150?img=5',
+  },
+  {
+    id: '5',
+    type: 'event',
+    name: 'Kış Festivali',
+    message: 'Etkinlik başladı!',
+    time: '2g önce',
+    avatar: 'https://images.unsplash.com/photo-1551982316-0b6c0c0a2c4f?w=150',
+  },
+  {
+    id: '6',
+    type: 'message',
+    name: 'Ahmet',
+    message: 'Yeni mesajın var!',
+    time: '3g önce',
+    avatar: 'https://i.pravatar.cc/150?img=13',
+  },
+];
 
 export default function Index() {
   const { signOut, user } = useAuth();
   const [myEvents, setMyEvents] = useState<Events[]>([]);
   const [recommendedEvents, setRecommendedEvents] = useState<Events[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<Events[]>([]);
-
-  // YENİ EKLENDİ: Modal yönetimi için state'ler
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Events | null>(null);
+  
+  // Bildirimler Modal
+  const [isNotificationsVisible, setIsNotificationsVisible] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -754,7 +121,6 @@ export default function Index() {
     if (!user) return;
     
     try {
-      // Benim eklediğim etkinlikler
       const myEventsResponse = await databases.listDocuments(
         DATABASE_ID,
         COLLECTION_ID,
@@ -762,7 +128,6 @@ export default function Index() {
       );
       setMyEvents(myEventsResponse.documents as Events[]);
 
-      // Yaklaşan etkinlikler (gelecek tarihli)
       const now = new Date().toISOString();
       const upcomingResponse = await databases.listDocuments(
         DATABASE_ID,
@@ -776,7 +141,6 @@ export default function Index() {
       );
       setUpcomingEvents(upcomingResponse.documents as Events[]);
 
-      // İlgi alanlarına göre etkinlikler (diğer kullanıcıların etkinlikleri)
       const recommendedResponse = await databases.listDocuments(
         DATABASE_ID,
         COLLECTION_ID,
@@ -794,24 +158,19 @@ export default function Index() {
 
   const handleJoinEvent = (eventId: string) => {
     console.log("Joining event:", eventId);
-    // Burada etkinliğe katılma API çağrısı yapılabilir
-    handleCloseModal(); // Katıldıktan sonra modal'ı kapat
+    handleCloseModal();
   };
   
-  // YENİ EKLENDİ: Modal'ı açan fonksiyon
-  const handleCardPress = (event: Events) => {
+  const handleCardPress = (event: Events, isMyEvent: boolean = false) => {
     setSelectedEvent(event);
     setIsModalVisible(true);
   };
 
-  // YENİ EKLENDİ: Modal'ı kapatan fonksiyon
   const handleCloseModal = () => {
     setIsModalVisible(false);
     setSelectedEvent(null);
   };
 
-
-  // Bu fonksiyonlar aynı kalıyor
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
@@ -821,6 +180,7 @@ export default function Index() {
     const month = months[date.getMonth()];
     return `${dayName}, ${day} ${month}`;
   };
+
   const formatTime = (dateString: string): string => {
     const date = new Date(dateString);
     const hours = date.getHours().toString().padStart(2, '0');
@@ -828,8 +188,7 @@ export default function Index() {
     return `${hours}:${minutes}`;
   };
 
-  // GÜNCELLENDİ: EventCard artık onCardPress prop'u alıyor
-  const EventCard = ({ event, showJoinButton = true, onCardPress }: { event: Events; showJoinButton?: boolean, onCardPress: (event: Events) => void }) => (
+  const EventCard = ({ event, showJoinButton = true, isMyEvent = false, onCardPress }: { event: Events; showJoinButton?: boolean; isMyEvent?: boolean; onCardPress: (event: Events) => void }) => (
     <TouchableOpacity style={styles.card} activeOpacity={0.8} onPress={() => onCardPress(event)}>
       <Image
         source={{ 
@@ -856,7 +215,6 @@ export default function Index() {
             {event.location || "Konum belirtilmemiş"}
           </Text>
         </View>
-        {/* Katıl butonu artık kartın içinde ve tıklamayı engellemiyor */}
         {showJoinButton && (
           <Button
             mode="contained"
@@ -872,16 +230,37 @@ export default function Index() {
     </TouchableOpacity>
   );
 
+  const NotificationItem = ({ item }: { item: Notification }) => (
+    <TouchableOpacity 
+      style={[styles.notificationItem, item.isNew && styles.notificationItemNew]}
+      activeOpacity={0.7}
+    >
+      {item.isNew && <View style={styles.newIndicator} />}
+      <Image source={{ uri: item.avatar }} style={styles.notificationAvatar} />
+      <View style={styles.notificationContent}>
+        <Text style={styles.notificationName}>{item.name}</Text>
+        <Text style={styles.notificationMessage}>{item.message}</Text>
+      </View>
+      <Text style={styles.notificationTime}>{item.time}</Text>
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      {/* Header - GÜNCELLENDİ */}
       <View style={styles.header}>
+        <View style={styles.headerLeft} />
         <Text variant="headlineMedium" style={styles.headerTitle}>
           Ana Sayfa
         </Text>
         <View style={styles.headerActions}>
-          <IconButton icon="bell-outline" size={24} onPress={() => console.log("Notifications")} />
-         
+          <IconButton 
+            icon="bell-outline" 
+            size={24} 
+            iconColor="#FFFFFF"
+            onPress={() => setIsNotificationsVisible(true)} 
+          />
         </View>
       </View>
 
@@ -905,8 +284,7 @@ export default function Index() {
             >
               {myEvents.map((event) => (
                 <View key={event.$id} style={styles.horizontalCard}>
-                  {/* GÜNCELLENDİ: onCardPress prop'u eklendi */}
-                  <EventCard event={event} showJoinButton={false} onCardPress={handleCardPress} />
+                  <EventCard event={event} showJoinButton={false} isMyEvent={true} onCardPress={(e) => handleCardPress(e, true)} />
                 </View>
               ))}
             </ScrollView>
@@ -923,7 +301,6 @@ export default function Index() {
             </View>
           ) : (
             recommendedEvents.map((event) => (
-              // GÜNCELLENDİ: onCardPress prop'u eklendi
               <EventCard key={event.$id} event={event} onCardPress={handleCardPress} />
             ))
           )}
@@ -939,14 +316,13 @@ export default function Index() {
             </View>
           ) : (
             upcomingEvents.map((event) => (
-              // GÜNCELLENDİ: onCardPress prop'u eklendi
               <EventCard key={event.$id} event={event} showJoinButton={false} onCardPress={handleCardPress} />
             ))
           )}
         </View>
       </ScrollView>
 
-      {/* YENİ EKLENDİ: Etkinlik Detay Modal'ı */}
+      {/* Etkinlik Detay Modal */}
       <Portal>
         <Modal
           visible={isModalVisible}
@@ -954,7 +330,7 @@ export default function Index() {
           contentContainerStyle={styles.modalContainer}
         >
           {selectedEvent && (
-            <ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
               <Image 
                 source={{ uri: selectedEvent.image_url || 'https://via.placeholder.com/400x200?text=Etkinlik+Görseli' }} 
                 style={styles.modalImage} 
@@ -978,15 +354,18 @@ export default function Index() {
                 <Text style={styles.modalDescriptionTitle}>Açıklama</Text>
                 <Text style={styles.modalDescription}>{selectedEvent.description || "Açıklama bulunmuyor."}</Text>
                 
+                {selectedEvent.user_id !== user?.$id && (
+                  <Button
+                    mode="contained"
+                    onPress={() => handleJoinEvent(selectedEvent.$id)}
+                    style={styles.joinButton}
+                    buttonColor="#3B82F6"
+                  >
+                    Etkinliğe Katıl
+                  </Button>
+                )}
+                
                 <Button
-                  mode="contained"
-                  onPress={() => handleJoinEvent(selectedEvent.$id)}
-                  style={styles.joinButton}
-                  buttonColor="#3B82F6"
-                >
-                  Etkinliğe Katıl
-                </Button>
-                 <Button
                   mode="text"
                   onPress={handleCloseModal}
                   style={styles.modalCloseButton}
@@ -998,12 +377,36 @@ export default function Index() {
             </ScrollView>
           )}
         </Modal>
+
+        {/* Bildirimler Modal - YENİ */}
+        <Modal
+          visible={isNotificationsVisible}
+          onDismiss={() => setIsNotificationsVisible(false)}
+          contentContainerStyle={styles.notificationsModal}
+        >
+          <View style={styles.notificationsHeader}>
+            <IconButton 
+              icon="arrow-left" 
+              size={24} 
+              iconColor="#FFFFFF"
+              onPress={() => setIsNotificationsVisible(false)}
+            />
+            <Text style={styles.notificationsTitle}>Bildirimler</Text>
+            <View style={styles.headerLeft} />
+          </View>
+          
+          <FlatList
+            data={DEMO_NOTIFICATIONS}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <NotificationItem item={item} />}
+            showsVerticalScrollIndicator={false}
+          />
+        </Modal>
       </Portal>
-    </View>
+    </SafeAreaView>
   );
 }
 
-// Stiller güncellendi
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1013,17 +416,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 16,
     paddingBottom: 8,
+  },
+  headerLeft: {
+    width: 48,
   },
   headerTitle: {
     fontWeight: "bold",
     color: "#FFFFFF",
+    flex: 1,
+    textAlign: "center",
+    fontSize: 20,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
+    width: 48,
+    justifyContent: "flex-end",
   },
   scrollContent: {
     paddingBottom: 24,
@@ -1075,12 +486,6 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     marginLeft: 8,
   },
-  description: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginTop: 8,
-    marginBottom: 12,
-  },
   joinButton: {
     marginTop: 12,
     borderRadius: 8,
@@ -1095,12 +500,15 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginTop: 8,
   },
-  // YENİ MODAL STİLLERİ
+  
+  // Etkinlik Modal Stilleri
   modalContainer: {
     backgroundColor: '#1F1F1F',
-    margin: 20,
+    marginHorizontal: 20,
+    marginVertical: 40,
     borderRadius: 16,
     maxHeight: '85%',
+    overflow: 'hidden',
   },
   modalImage: {
     width: '100%',
@@ -1137,5 +545,71 @@ const styles = StyleSheet.create({
   },
   modalCloseButton: {
     marginTop: 8,
+  },
+
+  // Bildirimler Modal Stilleri - YENİ
+  notificationsModal: {
+    backgroundColor: '#101722',
+    margin: 0,
+    height: '100%',
+  },
+  notificationsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  notificationsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    position: 'relative',
+  },
+  notificationItemNew: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  },
+  newIndicator: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: '#3B82F6',
+  },
+  notificationAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 12,
+  },
+  notificationContent: {
+    flex: 1,
+    gap: 4,
+  },
+  notificationName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  notificationMessage: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  notificationTime: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginLeft: 8,
   },
 });

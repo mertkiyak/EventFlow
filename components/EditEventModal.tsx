@@ -1,13 +1,13 @@
 import { EditEventData } from '@/app/(tabs)/profile';
 import { Dispatch, SetStateAction } from 'react';
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface EditEventModalProps {
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   container: {
-    backgroundColor: '#1C2620',
+    backgroundColor: '#343434ff',
     borderRadius: 24,
     padding: 20,
     width: '100%',
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#29382f',
+    backgroundColor: '#343434ff',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -193,19 +193,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    color: '#9eb7a8',
+    color: '#c2c2c2ff',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#29382f',
+    backgroundColor: '#3b3b3bff',
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
     color: '#fff',
     borderWidth: 1,
-    borderColor: '#3a4a40',
+    borderColor: '#464646ff',
   },
   textArea: {
     height: 100,
@@ -223,20 +223,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#29382f',
+    backgroundColor: '#464646ff',
     borderWidth: 1,
-    borderColor: '#3a4a40',
+    borderColor: '#434343ff',
   },
   cancelButtonText: {
-    color: '#9eb7a8',
+    color: '#ffffffff',
     fontSize: 16,
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#38e07b',
+    backgroundColor: '#3b82f6ff',
   },
   saveButtonText: {
-    color: '#111714',
+    color: '#ffffffff',
     fontSize: 16,
     fontWeight: '700',
   },
