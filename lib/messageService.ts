@@ -7,7 +7,7 @@ export interface Message {
   receiverId: string;
   text: string;
   conversationId: string;
-  $createdAt: string; // createdAt yerine $createdAt
+  $createdAt: string;
   isRead: boolean;
 }
 
@@ -16,7 +16,7 @@ export interface Conversation {
   participants: string[];
   lastMessage?: string;
   lastMessageTime?: string;
-  $updatedAt: string; // updatedAt yerine $updatedAt
+  $updatedAt: string;
 }
 
 class MessageService {
@@ -44,7 +44,6 @@ class MessageService {
         conversationId,
         {
           participants: [userId1, userId2],
-          // updatedAt kaldırıldı - Appwrite otomatik ekleyecek
         }
       );
 
@@ -66,11 +65,9 @@ class MessageService {
       const conversationId = this.createConversationId(senderId, receiverId);
       console.log('Conversation ID:', conversationId);
 
-      // Konuşmayı oluştur veya getir
       await this.getOrCreateConversation(senderId, receiverId);
       console.log('Conversation ready');
 
-      // Mesajı oluştur - createdAt kaldırıldı
       const messageData = {
         senderId,
         receiverId,
@@ -90,7 +87,6 @@ class MessageService {
 
       console.log('Message created:', message.$id);
 
-      // Konuşmayı güncelle - updatedAt kaldırıldı
       await databases.updateDocument(
         DATABASE_ID,
         CONVERSATIONS_COLLECTION_ID,
@@ -134,7 +130,7 @@ class MessageService {
         MESSAGES_COLLECTION_ID,
         [
           Query.equal('conversationId', conversationId),
-          Query.orderDesc('$createdAt'), // createdAt yerine $createdAt
+          Query.orderDesc('$createdAt'),
           Query.limit(limit),
         ]
       );
@@ -148,6 +144,46 @@ class MessageService {
         code: error.code,
         type: error.type,
       });
+      return [];
+    }
+  }
+
+  // YENİ: Gönderen ID'ye göre mesajları getir
+  async getMessagesBySender(senderId: string): Promise<Message[]> {
+    try {
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        MESSAGES_COLLECTION_ID,
+        [
+          Query.equal('senderId', senderId),
+          Query.orderDesc('$createdAt'),
+          Query.limit(500),
+        ]
+      );
+
+      return response.documents as any;
+    } catch (error: any) {
+      console.error('Error getting messages by sender:', error);
+      return [];
+    }
+  }
+
+  // YENİ: Alıcı ID'ye göre mesajları getir
+  async getMessagesByReceiver(receiverId: string): Promise<Message[]> {
+    try {
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        MESSAGES_COLLECTION_ID,
+        [
+          Query.equal('receiverId', receiverId),
+          Query.orderDesc('$createdAt'),
+          Query.limit(500),
+        ]
+      );
+
+      return response.documents as any;
+    } catch (error: any) {
+      console.error('Error getting messages by receiver:', error);
       return [];
     }
   }
@@ -199,6 +235,55 @@ class MessageService {
         }
       }
     });
+  }
+
+  // YENİ: Okunmamış mesaj sayısını getir
+  async getUnreadCount(userId: string): Promise<number> {
+    try {
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        MESSAGES_COLLECTION_ID,
+        [
+          Query.equal('receiverId', userId),
+          Query.equal('isRead', false),
+        ]
+      );
+
+      return response.total;
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      return 0;
+    }
+  }
+
+  // YENİ: Mesaj sil
+  async deleteMessage(messageId: string): Promise<void> {
+    try {
+      await databases.deleteDocument(
+        DATABASE_ID,
+        MESSAGES_COLLECTION_ID,
+        messageId
+      );
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      throw error;
+    }
+  }
+
+  // YENİ: Konuşmayı sil
+  async deleteConversation(userId1: string, userId2: string): Promise<void> {
+    try {
+      const messages = await this.getMessages(userId1, userId2);
+      
+      const deletePromises = messages.map((message) =>
+        this.deleteMessage(message.$id)
+      );
+
+      await Promise.all(deletePromises);
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      throw error;
+    }
   }
 }
 

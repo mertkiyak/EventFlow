@@ -10,72 +10,24 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEffect, useState } from "react";
 import { FlatList, Image, SafeAreaView, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Query } from "react-native-appwrite";
-import { Button, IconButton, Modal, Portal, Text } from "react-native-paper";
+import { Badge, Button, IconButton, Modal, Portal, Text } from "react-native-paper";
 import { Events } from "../../types/database.type";
 
 // Bildirim Tipi
 interface Notification {
-  id: string;
+  $id: string;
+  user_id: string;
   type: 'match' | 'event' | 'message';
-  name: string;
+  title: string;
   message: string;
-  time: string;
-  avatar: string;
-  isNew?: boolean;
+  related_id?: string;
+  avatar_url: string;
+  is_read: boolean;
+  $createdAt: string;
 }
 
-// Demo Bildirimler
-const DEMO_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'match',
-    name: 'Elif',
-    message: 'Yeni bir eşleşmen var!',
-    time: 'Şimdi',
-    avatar: 'https://i.pravatar.cc/150?img=1',
-    isNew: true,
-  },
-  {
-    id: '2',
-    type: 'event',
-    name: 'Yaz Kampı',
-    message: 'Etkinlik başladı!',
-    time: '1s önce',
-    avatar: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=150',
-  },
-  {
-    id: '3',
-    type: 'message',
-    name: 'Mehmet',
-    message: 'Yeni mesajın var!',
-    time: '5s önce',
-    avatar: 'https://i.pravatar.cc/150?img=12',
-  },
-  {
-    id: '4',
-    type: 'match',
-    name: 'Ayşe',
-    message: 'Yeni bir eşleşmen var!',
-    time: '1g önce',
-    avatar: 'https://i.pravatar.cc/150?img=5',
-  },
-  {
-    id: '5',
-    type: 'event',
-    name: 'Kış Festivali',
-    message: 'Etkinlik başladı!',
-    time: '2g önce',
-    avatar: 'https://images.unsplash.com/photo-1551982316-0b6c0c0a2c4f?w=150',
-  },
-  {
-    id: '6',
-    type: 'message',
-    name: 'Ahmet',
-    message: 'Yeni mesajın var!',
-    time: '3g önce',
-    avatar: 'https://i.pravatar.cc/150?img=13',
-  },
-];
+// Notifications koleksiyon ID'nizi buraya ekleyin
+const NOTIFICATIONS_COLLECTION_ID = "YOUR_NOTIFICATIONS_COLLECTION_ID";
 
 export default function Index() {
   const { signOut, user } = useAuth();
@@ -85,11 +37,14 @@ export default function Index() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Events | null>(null);
   
-  // Bildirimler Modal
+  // Bildirimler State'leri
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isNotificationsVisible, setIsNotificationsVisible] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (user) {
+      // Events real-time subscription
       const eventsChannel = `databases.${DATABASE_ID}.collections.${COLLECTION_ID}.documents`;
       const eventSubscription = client.subscribe(
         eventsChannel,
@@ -110,12 +65,153 @@ export default function Index() {
         }
       );
 
+      // Notifications real-time subscription
+      const notificationsChannel = `databases.${DATABASE_ID}.collections.${NOTIFICATIONS_COLLECTION_ID}.documents`;
+      const notificationSubscription = client.subscribe(
+        notificationsChannel,
+        (response: RealTimeEventResponse) => {
+          if (
+            response.events.includes(
+              "databases.*.collections.*.documents.*.create"
+            ) ||
+            response.events.includes(
+              "databases.*.collections.*.documents.*.update"
+            )
+          ) {
+            fetchNotifications();
+          }
+        }
+      );
+
       fetchAllEvents();
+      fetchNotifications();
+      
       return () => {
         eventSubscription();
+        notificationSubscription();
       };
     }
   }, [user]);
+
+  const fetchNotifications = async () => {
+    if (!user) return;
+    
+    try {
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        NOTIFICATIONS_COLLECTION_ID,
+        [
+          Query.equal("user_id", user.$id),
+          Query.orderDesc("$createdAt"),
+          Query.limit(50)
+        ]
+      );
+      
+      const notifs = response.documents as unknown as Notification[];
+      setNotifications(notifs);
+      
+      // Okunmamış bildirim sayısını hesapla
+      const unread = notifs.filter(n => !n.is_read).length;
+      setUnreadCount(unread);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
+
+  const markAsRead = async (notificationId: string) => {
+    try {
+      await databases.updateDocument(
+        DATABASE_ID,
+        NOTIFICATIONS_COLLECTION_ID,
+        notificationId,
+        { is_read: true }
+      );
+      
+      // Local state'i güncelle
+      setNotifications(prev => 
+        prev.map(n => 
+          n.$id === notificationId ? { ...n, is_read: true } : n
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const unreadNotifications = notifications.filter(n => !n.is_read);
+      
+      await Promise.all(
+        unreadNotifications.map(n =>
+          databases.updateDocument(
+            DATABASE_ID,
+            NOTIFICATIONS_COLLECTION_ID,
+            n.$id,
+            { is_read: true }
+          )
+        )
+      );
+      
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+    }
+  };
+
+  const handleNotificationPress = async (notification: Notification) => {
+    // Bildirimi okundu olarak işaretle
+    if (!notification.is_read) {
+      await markAsRead(notification.$id);
+    }
+
+    // Bildirim tipine göre işlem yap
+    switch (notification.type) {
+      case 'event':
+        // Etkinlik detayını aç
+        if (notification.related_id) {
+          try {
+            const event = await databases.getDocument(
+              DATABASE_ID,
+              COLLECTION_ID,
+              notification.related_id
+            );
+            setSelectedEvent(event as Events);
+            setIsNotificationsVisible(false);
+            setIsModalVisible(true);
+          } catch (error) {
+            console.error("Error fetching event:", error);
+          }
+        }
+        break;
+      case 'message':
+        // Mesaj ekranına yönlendir
+        console.log("Navigate to messages:", notification.related_id);
+        break;
+      case 'match':
+        // Eşleşme detayına git
+        console.log("Navigate to match:", notification.related_id);
+        break;
+    }
+  };
+
+  const formatNotificationTime = (dateString: string): string => {
+    const now = new Date();
+    const notifDate = new Date(dateString);
+    const diffMs = now.getTime() - notifDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Şimdi';
+    if (diffMins < 60) return `${diffMins}d önce`;
+    if (diffHours < 24) return `${diffHours}s önce`;
+    if (diffDays < 7) return `${diffDays}g önce`;
+    
+    return notifDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+  };
 
   const fetchAllEvents = async () => {
     if (!user) return;
@@ -232,35 +328,43 @@ export default function Index() {
 
   const NotificationItem = ({ item }: { item: Notification }) => (
     <TouchableOpacity 
-      style={[styles.notificationItem, item.isNew && styles.notificationItemNew]}
+      style={[styles.notificationItem, !item.is_read && styles.notificationItemNew]}
       activeOpacity={0.7}
+      onPress={() => handleNotificationPress(item)}
     >
-      {item.isNew && <View style={styles.newIndicator} />}
-      <Image source={{ uri: item.avatar }} style={styles.notificationAvatar} />
+      {!item.is_read && <View style={styles.newIndicator} />}
+      <Image source={{ uri: item.avatar_url }} style={styles.notificationAvatar} />
       <View style={styles.notificationContent}>
-        <Text style={styles.notificationName}>{item.name}</Text>
+        <Text style={styles.notificationName}>{item.title}</Text>
         <Text style={styles.notificationMessage}>{item.message}</Text>
       </View>
-      <Text style={styles.notificationTime}>{item.time}</Text>
+      <Text style={styles.notificationTime}>{formatNotificationTime(item.$createdAt)}</Text>
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
-      {/* Header - GÜNCELLENDİ */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft} />
         <Text variant="headlineMedium" style={styles.headerTitle}>
           Ana Sayfa
         </Text>
         <View style={styles.headerActions}>
-          <IconButton 
-            icon="bell-outline" 
-            size={24} 
-            iconColor="#FFFFFF"
-            onPress={() => setIsNotificationsVisible(true)} 
-          />
+          <View>
+            <IconButton 
+              icon="bell-outline" 
+              size={24} 
+              iconColor="#FFFFFF"
+              onPress={() => setIsNotificationsVisible(true)} 
+            />
+            {unreadCount > 0 && (
+              <Badge style={styles.badge} size={20}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Badge>
+            )}
+          </View>
         </View>
       </View>
 
@@ -378,7 +482,7 @@ export default function Index() {
           )}
         </Modal>
 
-        {/* Bildirimler Modal - YENİ */}
+        {/* Bildirimler Modal */}
         <Modal
           visible={isNotificationsVisible}
           onDismiss={() => setIsNotificationsVisible(false)}
@@ -392,15 +496,32 @@ export default function Index() {
               onPress={() => setIsNotificationsVisible(false)}
             />
             <Text style={styles.notificationsTitle}>Bildirimler</Text>
-            <View style={styles.headerLeft} />
+            {unreadCount > 0 && (
+              <Button 
+                mode="text" 
+                textColor="#3B82F6"
+                onPress={markAllAsRead}
+                compact
+              >
+                Okundu
+              </Button>
+            )}
+            {unreadCount === 0 && <View style={styles.headerLeft} />}
           </View>
           
-          <FlatList
-            data={DEMO_NOTIFICATIONS}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <NotificationItem item={item} />}
-            showsVerticalScrollIndicator={false}
-          />
+          {notifications.length === 0 ? (
+            <View style={styles.emptyNotifications}>
+              <MaterialCommunityIcons name="bell-off-outline" size={64} color="#6B7280" />
+              <Text style={styles.emptyNotificationsText}>Henüz bildirim yok</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={notifications}
+              keyExtractor={(item) => item.$id}
+              renderItem={({ item }) => <NotificationItem item={item} />}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
         </Modal>
       </Portal>
     </SafeAreaView>
@@ -435,6 +556,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: 48,
     justifyContent: "flex-end",
+  },
+  badge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#EF4444',
   },
   scrollContent: {
     paddingBottom: 24,
@@ -547,7 +674,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // Bildirimler Modal Stilleri - YENİ
+  // Bildirimler Modal Stilleri
   notificationsModal: {
     backgroundColor: '#101722',
     margin: 0,
@@ -611,5 +738,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.5)',
     marginLeft: 8,
+  },
+  emptyNotifications: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  emptyNotificationsText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 16,
   },
 });

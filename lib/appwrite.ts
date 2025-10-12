@@ -26,7 +26,7 @@ export const BUCKET_ID = "68e3150d000f8d7abf62"; // Appwrite'tan alacaksınız
 export const PROJECT_ID = "687fa279001603a29450"; // Appwrite console'dan alın
 
 
-
+export const NOTIFICATIONS_COLLECTION_ID = "68eaf59500234a92760c"; // Buraya kendi ID'nizi yazın
 export const MESSAGES_COLLECTION_ID = '68e85ad500181492effc'; // Mesajlar koleksiyonu ID'si
 export const CONVERSATIONS_COLLECTION_ID = '68e85bb7002adccc2ca7'; // Konuşmalar koleksiyonu ID'si
 export const USERS_COLLECTION_ID = '68e85c200010d15a4770'; // Kullanıcılar koleksiyonu ID'si
@@ -34,3 +34,4 @@ export const USERS_COLLECTION_ID = '68e85c200010d15a4770'; // Kullanıcılar kol
 export { ID, Query };
 
   export type { Models } from 'react-native-appwrite';
+

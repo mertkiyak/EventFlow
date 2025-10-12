@@ -26,7 +26,7 @@ export interface UserProfile {
   location: string;
   bio: string;
   interests: string[];
-  avatarUrl: string;
+  avatar_url: string;
   followers: number;
   following: number;
   $createdAt: string;
