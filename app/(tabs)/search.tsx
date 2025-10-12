@@ -87,7 +87,7 @@ export default function SearchScreen() {
       console.error('Search error:', error);
     } finally {
       setSearching(false);
-    }
+    } 
   };
 
   const highlightMatch = (text: string, query: string) => {
