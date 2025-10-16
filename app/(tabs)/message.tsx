@@ -2,9 +2,9 @@ import { DATABASE_ID, databases } from '@/lib/appwrite';
 import { useAuth } from '@/lib/auth-context';
 import messageService, { Message } from '@/lib/messageService';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-
 // Appwrite Collection ID'lerini buraya ekleyin
 const USERS_COLLECTION_ID = "68e85ad500181492effc"; // Buraya users collection ID'nizi yazın
 
@@ -26,6 +26,7 @@ interface ConversationUser extends UserProfile {
 
 export default function MessageScreen() {
   const { user } = useAuth();
+  const params = useLocalSearchParams();
   const [selectedUser, setSelectedUser] = useState<ConversationUser | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -42,7 +43,35 @@ export default function MessageScreen() {
     if (!user) return;
     loadConversations();
   }, [user]);
-
+  // URL parametrelerinden gelen kullanıcıyı otomatik seç
+  useEffect(() => {
+    if (params.selectedUserId && conversations.length > 0) {
+      console.log('Looking for user from params:', params.selectedUserId);
+      
+      // Önce conversations'da var mı kontrol et
+      const existingConv = conversations.find(c => c.$id === params.selectedUserId);
+      if (existingConv) {
+        console.log('Found user in conversations:', existingConv.name);
+        setSelectedUser(existingConv);
+        return;
+      }
+      
+      // Yoksa params'tan oluştur
+      console.log('Creating user from params');
+      const userFromParams: ConversationUser = {
+        $id: params.selectedUserId as string,
+        name: params.selectedUserName as string || 'Kullanıcı',
+        email: params.selectedUserEmail as string || '',
+        avatar_url: params.selectedUserAvatar as string || undefined,
+        bio: params.selectedUserBio as string || undefined,
+        location: params.selectedUserLocation as string || undefined,
+        unreadCount: 0,
+        isOnline: false,
+      };
+      
+      setSelectedUser(userFromParams);
+    }
+  }, [params.selectedUserId, conversations]);
   // Kullanıcı seçildiğinde mesajları yükle
   useEffect(() => {
     if (!user || !selectedUser) return;
@@ -928,3 +957,133 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 });
+
+
+
+
+
+
+
+
+
+// import { DATABASE_ID, databases } from '@/lib/appwrite';
+// import { useAuth } from '@/lib/auth-context';
+// import messageService, { Message } from '@/lib/messageService';
+// import { Ionicons } from '@expo/vector-icons';
+// import { useLocalSearchParams } from 'expo-router';
+// import { useEffect, useRef, useState } from 'react';
+// import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+
+// const USERS_COLLECTION_ID = "68e85ad500181492effc";
+
+// interface UserProfile {
+//   $id: string;
+//   name: string;
+//   email: string;
+//   avatar_url?: string;
+//   bio?: string;
+//   location?: string;
+// }
+
+// interface ConversationUser extends UserProfile {
+//   lastMessage?: string;
+//   lastMessageTime?: Date;
+//   unreadCount: number;
+//   isOnline?: boolean;
+// }
+
+// export default function MessageScreen() {
+//   const { user } = useAuth();
+//   const params = useLocalSearchParams();
+//   const [selectedUser, setSelectedUser] = useState<ConversationUser | null>(null);
+//   const [showProfile, setShowProfile] = useState(false);
+//   const [isFollowing, setIsFollowing] = useState(false);
+//   const [messages, setMessages] = useState<Message[]>([]);
+//   const [messageText, setMessageText] = useState('');
+//   const [loading, setLoading] = useState(false);
+//   const [sending, setSending] = useState(false);
+//   const [conversations, setConversations] = useState<ConversationUser[]>([]);
+//   const [loadingConversations, setLoadingConversations] = useState(true);
+//   const scrollViewRef = useRef<ScrollView>(null);
+
+//   // Konuşmaları yükle
+//   useEffect(() => {
+//     if (!user) return;
+//     loadConversations();
+//   }, [user]);
+
+//   // URL parametrelerinden gelen kullanıcıyı otomatik seç
+//   useEffect(() => {
+//     if (params.selectedUserId && conversations.length > 0) {
+//       console.log('Looking for user from params:', params.selectedUserId);
+      
+//       // Önce conversations'da var mı kontrol et
+//       const existingConv = conversations.find(c => c.$id === params.selectedUserId);
+//       if (existingConv) {
+//         console.log('Found user in conversations:', existingConv.name);
+//         setSelectedUser(existingConv);
+//         return;
+//       }
+      
+//       // Yoksa params'tan oluştur
+//       console.log('Creating user from params');
+//       const userFromParams: ConversationUser = {
+//         $id: params.selectedUserId as string,
+//         name: params.selectedUserName as string || 'Kullanıcı',
+//         email: params.selectedUserEmail as string || '',
+//         avatar_url: params.selectedUserAvatar as string || undefined,
+//         bio: params.selectedUserBio as string || undefined,
+//         location: params.selectedUserLocation as string || undefined,
+//         unreadCount: 0,
+//         isOnline: false,
+//       };
+      
+//       setSelectedUser(userFromParams);
+//     }
+//   }, [params.selectedUserId, conversations]);
+
+//   // Kullanıcı seçildiğinde mesajları yükle
+//   useEffect(() => {
+//     if (!user || !selectedUser) return;
+
+//     loadMessages();
+    
+//     const conversationId = messageService.createConversationId(user.$id, selectedUser.$id);
+    
+//     const unsubscribe = messageService.subscribeToMessages(
+//       conversationId,
+//       (newMessage) => {
+//         setMessages((prev) => {
+//           if (prev.some(msg => msg.$id === newMessage.$id)) {
+//             return prev;
+//           }
+//           return [...prev, newMessage];
+//         });
+//         scrollToBottom();
+        
+//         if (newMessage.senderId !== user.$id) {
+//           messageService.markMessagesAsRead(user.$id, selectedUser.$id);
+//         }
+//       }
+//     );
+
+//     return () => {
+//       unsubscribe();
+//     };
+//   }, [user, selectedUser]);
+
+//   const loadConversations = async () => {
+//     if (!user) return;
+
+//     try {
+//       setLoadingConversations(true);
+      
+//       const sentMessages = await messageService.getMessagesBySender(user.$id);
+//       const receivedMessages = await messageService.getMessagesByReceiver(user.$id);
+      
+//       console.log('Sent messages:', sentMessages.length);
+//       console.log('Received messages:', receivedMessages.length);
+      
+//       const userIds = new Set<string>();
+      
+//       sentMessages.forEach((msg

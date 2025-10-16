@@ -1,3 +1,4 @@
+import { MD5 } from 'crypto-js'; // Bu paketi yüklemeniz gerekebilir: npm install crypto-js @types/crypto-js
 import type { Models } from 'react-native-appwrite';
 import { client, CONVERSATIONS_COLLECTION_ID, DATABASE_ID, databases, ID, MESSAGES_COLLECTION_ID, Query } from './appwrite';
 
@@ -20,34 +21,45 @@ export interface Conversation {
 }
 
 class MessageService {
+  // Conversation ID'yi hash ile kısaltıyoruz (32 karakter)
   createConversationId(userId1: string, userId2: string): string {
-    return [userId1, userId2].sort().join('_');
+    const sortedIds = [userId1, userId2].sort().join('_');
+    // MD5 hash 32 karakter üretir, Appwrite limiti 36 karakter
+    return MD5(sortedIds).toString();
   }
 
   async getOrCreateConversation(userId1: string, userId2: string): Promise<Conversation> {
     const conversationId = this.createConversationId(userId1, userId2);
     
     try {
-      const response = await databases.listDocuments(
-        DATABASE_ID,
-        CONVERSATIONS_COLLECTION_ID,
-        [Query.equal('$id', conversationId)]
-      );
-
-      if (response.documents.length > 0) {
-        return response.documents[0] as any;
-      }
-
-      const newConversation = await databases.createDocument(
-        DATABASE_ID,
-        CONVERSATIONS_COLLECTION_ID,
-        conversationId,
-        {
-          participants: [userId1, userId2],
+      console.log('Getting conversation:', conversationId);
+      
+      // Önce conversation var mı kontrol et
+      try {
+        const existingConversation = await databases.getDocument(
+          DATABASE_ID,
+          CONVERSATIONS_COLLECTION_ID,
+          conversationId
+        );
+        console.log('Conversation found:', existingConversation.$id);
+        return existingConversation as any;
+      } catch (error: any) {
+        // Conversation yoksa yeni oluştur (404 hatası beklenir)
+        if (error.code === 404) {
+          console.log('Creating new conversation...');
+          const newConversation = await databases.createDocument(
+            DATABASE_ID,
+            CONVERSATIONS_COLLECTION_ID,
+            conversationId,
+            {
+              participants: [userId1, userId2],
+            }
+          );
+          console.log('New conversation created:', newConversation.$id);
+          return newConversation as any;
         }
-      );
-
-      return newConversation as any;
+        throw error;
+      }
     } catch (error: any) {
       console.error('Error in getOrCreateConversation:', error);
       throw new Error(`Konuşma oluşturulamadı: ${error.message || 'Bilinmeyen hata'}`);
@@ -62,6 +74,15 @@ class MessageService {
     try {
       console.log('Sending message:', { senderId, receiverId, text });
       
+      // Kullanıcı ID'lerini validate et
+      if (!senderId || !receiverId) {
+        throw new Error('Gönderen veya alıcı ID\'si eksik');
+      }
+
+      if (senderId === receiverId) {
+        throw new Error('Kendinize mesaj gönderemezsiniz');
+      }
+
       const conversationId = this.createConversationId(senderId, receiverId);
       console.log('Conversation ID:', conversationId);
 
@@ -71,7 +92,7 @@ class MessageService {
       const messageData = {
         senderId,
         receiverId,
-        text,
+        text: text.trim(),
         conversationId,
         isRead: false,
       };
@@ -87,17 +108,22 @@ class MessageService {
 
       console.log('Message created:', message.$id);
 
-      await databases.updateDocument(
-        DATABASE_ID,
-        CONVERSATIONS_COLLECTION_ID,
-        conversationId,
-        {
-          lastMessage: text,
-          lastMessageTime: new Date().toISOString(),
-        }
-      );
-
-      console.log('Conversation updated');
+      // Conversation'ı güncelle
+      try {
+        await databases.updateDocument(
+          DATABASE_ID,
+          CONVERSATIONS_COLLECTION_ID,
+          conversationId,
+          {
+            lastMessage: text.substring(0, 100), // İlk 100 karakteri al
+            lastMessageTime: new Date().toISOString(),
+          }
+        );
+        console.log('Conversation updated');
+      } catch (updateError) {
+        console.warn('Could not update conversation lastMessage:', updateError);
+        // Mesaj gönderildi, sadece lastMessage güncellenemedi
+      }
 
       return message as any;
     } catch (error: any) {
@@ -148,7 +174,6 @@ class MessageService {
     }
   }
 
-  // YENİ: Gönderen ID'ye göre mesajları getir
   async getMessagesBySender(senderId: string): Promise<Message[]> {
     try {
       const response = await databases.listDocuments(
@@ -168,7 +193,6 @@ class MessageService {
     }
   }
 
-  // YENİ: Alıcı ID'ye göre mesajları getir
   async getMessagesByReceiver(receiverId: string): Promise<Message[]> {
     try {
       const response = await databases.listDocuments(
@@ -237,7 +261,6 @@ class MessageService {
     });
   }
 
-  // YENİ: Okunmamış mesaj sayısını getir
   async getUnreadCount(userId: string): Promise<number> {
     try {
       const response = await databases.listDocuments(
@@ -256,7 +279,6 @@ class MessageService {
     }
   }
 
-  // YENİ: Mesaj sil
   async deleteMessage(messageId: string): Promise<void> {
     try {
       await databases.deleteDocument(
@@ -270,7 +292,6 @@ class MessageService {
     }
   }
 
-  // YENİ: Konuşmayı sil
   async deleteConversation(userId1: string, userId2: string): Promise<void> {
     try {
       const messages = await this.getMessages(userId1, userId2);
@@ -288,3 +309,11 @@ class MessageService {
 }
 
 export default new MessageService();
+
+
+
+
+
+
+
+

@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   SafeAreaView,
@@ -41,6 +42,7 @@ export default function SearchScreen() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [eventOwner, setEventOwner] = useState<UserResult | null>(null);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   // Debounce için
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function SearchScreen() {
         ]
       );
 
-      setUserResults(usersResponse.documents as unknown as  UserResult[]);
+      setUserResults(usersResponse.documents as unknown as UserResult[]);
       setEventResults(eventsResponse.documents as Events[]);
     } catch (error) {
       console.error('Search error:', error);
@@ -115,7 +117,7 @@ export default function SearchScreen() {
         USERS_COLLECTION_ID,
         event.user_id
       );
-      setEventOwner(owner as unknown as  UserResult);
+      setEventOwner(owner as unknown as UserResult);
     } catch (error) {
       console.error('Error fetching event owner:', error);
     }
@@ -125,21 +127,41 @@ export default function SearchScreen() {
 
   const handleSendMessage = async (targetUser: UserResult) => {
     if (!user) {
-      alert('Lütfen önce giriş yapın');
+      Alert.alert('Hata', 'Lütfen önce giriş yapın');
       return;
     }
 
     try {
-      // Konuşma oluştur
+      setSendingMessage(true);
+      console.log('Creating conversation with:', targetUser.name, targetUser.$id);
+      
+      // Konuşma oluştur veya mevcut olanı getir
       await messageService.getOrCreateConversation(user.$id, targetUser.$id);
       
-      // Mesaj ekranına yönlendir
+      console.log('Conversation ready, navigating to message screen...');
+      
+      // Modal'ları kapat
       setShowUserModal(false);
       setShowEventModal(false);
-      router.push('/message');
-    } catch (error) {
+      
+      // Mesaj ekranına yönlendir ve kullanıcı bilgilerini params ile gönder
+      router.push({
+        pathname: '/message',
+        params: {
+          selectedUserId: targetUser.$id,
+          selectedUserName: targetUser.name,
+          selectedUserEmail: targetUser.email,
+          selectedUserAvatar: targetUser.avatar_url || '',
+          selectedUserBio: targetUser.bio || '',
+          selectedUserLocation: targetUser.location || '',
+        }
+      });
+      
+    } catch (error: any) {
       console.error('Error creating conversation:', error);
-      alert('Sohbet başlatılamadı');
+      Alert.alert('Hata', error.message || 'Sohbet başlatılamadı');
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -313,11 +335,18 @@ export default function SearchScreen() {
                 )}
 
                 <TouchableOpacity
-                  style={styles.messageButton}
+                  style={[styles.messageButton, sendingMessage && styles.messageButtonDisabled]}
                   onPress={() => handleSendMessage(selectedUser)}
+                  disabled={sendingMessage}
                 >
-                  <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
-                  <Text style={styles.messageButtonText}>Mesaj Gönder</Text>
+                  {sendingMessage ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
+                      <Text style={styles.messageButtonText}>Mesaj Gönder</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </ScrollView>
             )}
@@ -616,6 +645,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     gap: 8,
+  },
+  messageButtonDisabled: {
+    opacity: 0.5,
   },
   messageButtonText: {
     fontSize: 18,
