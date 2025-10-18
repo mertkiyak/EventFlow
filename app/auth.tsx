@@ -1,125 +1,310 @@
-
 import { useAuth } from "@/lib/auth-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
-import { Button, Text, TextInput, useTheme } from "react-native-paper";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Text, TextInput } from "react-native-paper";
 
 export default function AuthScreen() {
- 
-  const [isSignUp, setIsSignUp] = useState(false);        // Kullanıcının giriş mi yoksa kayıt olma modunda mı olduğunu tutar
-  const[email, setEmail] = useState<string>("");          // E-posta bilgisini tutar
-  const[password, setPassword] = useState<string>("");    // Şifre bilgisini tutar
-  const[error, setError] = useState<string | null>("");   // Hata mesajını tutar, başlangıçta boş bir string
- 
-  const theme = useTheme()
-  const router = useRouter()
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [error, setError] = useState<string | null>("");
+  const [secureTextEntry, setSecureTextEntry] = useState(true);
+  
+  const router = useRouter();
+  const { signIn, signUp } = useAuth();
 
-  const{signIn, signUp}= useAuth()
- 
-// Giriş/Kayıt işlemini kontrol eden fonksiyon
-  const handleAuth =async() => {
-    if(!email|| !password){
-        setError("Please fill in all fields.")
-        return;
-    }
-
- // Şifre uzunluğu 6 karakterden azsa, hata mesajı göster
-    if(password.length < 6){
-      setError("Password must be at leat 6 characters long.");
+  const handleAuth = async () => {
+    if (!email || !password) {
+      setError("Please fill in all fields.");
       return;
     }
-   // Hata yoksa error state'i sıfırlanır
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+    
     setError(null);
 
-    if (isSignUp){
-      const error = await signUp(email, password) 
-      if(error){
-        setError(error)
-        return
+    if (isSignUp) {
+      const error = await signUp(email, password);
+      if (error) {
+        setError(error);
+        return;
       }
-      
-    }
-    else{
-      const error = await signIn(email, password)
-      if(error){
-        setError(error)
-        return
+    } else {
+      const error = await signIn(email, password);
+      if (error) {
+        setError(error);
+        return;
       }
     }
-    router.replace("/")
-
+    router.replace("/");
   };
 
-
-// Ekrana geri dönen JSX yapısı
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "android" ? "padding" : "height"}
-      style={ styles.container}
-      
-    >
-      <View style={styles.content}> 
-        <Text style={styles.title} variant="headlineMedium">
-          {isSignUp ? "Create Account" : "Welcome Back"}
-        </Text>
+    <View style={styles.container}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardView}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Form Card */}
+          <View style={styles.formCard}>
+            <Text style={styles.title} variant="headlineLarge">
+              {isSignUp ? "Create Account" : "Welcome Back"}
+            </Text>
+            <Text style={styles.subtitle} variant="bodyMedium">
+              {isSignUp 
+                ? "Sign up to get started with EventFlow" 
+                : "Sign in to continue to EventFlow"}
+            </Text>
 
-        <TextInput 
-          label="Email" 
-          autoCapitalize="none" 
-          keyboardType="email-address"
-          placeholder="example@gmail.com"
-          mode="outlined"
-         
-          style={styles.input}
-          onChangeText={setEmail}
-        />
+            {/* Email Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons 
+                  name="mail-outline" 
+                  size={20} 
+                  color="#9ca3af" 
+                  style={styles.inputIcon} 
+                />
+                <TextInput 
+                  autoCapitalize="none" 
+                  keyboardType="email-address"
+                  placeholder="example@gmail.com"
+                  placeholderTextColor="#A1A1AA"
+                  mode="flat"
+                  value={email}
+                  style={styles.input}
+                  onChangeText={setEmail}
+                  underlineColor="transparent"
+                  activeUnderlineColor="transparent"
+                  contentStyle={styles.inputContent}
+                  textColor="#f9fafb"
+                  theme={{
+                    colors: {
+                      background: '#1f2937',
+                    }
+                  }}
+                />
+              </View>
+            </View>
 
-        <TextInput 
-          label="Password" 
-          autoCapitalize="none" 
-          secureTextEntry
-          mode="outlined"
-          style={styles.input}
-          onChangeText={setPassword}
-        />
-        {error &&(<Text style={{color: theme.colors.error}}>{error}</Text>)}
+            {/* Password Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons 
+                  name="lock-closed-outline" 
+                  size={20} 
+                  color="#9ca3af" 
+                  style={styles.inputIcon} 
+                />
+                <TextInput 
+                  autoCapitalize="none" 
+                  secureTextEntry={secureTextEntry}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#A1A1AA"
+                  mode="flat"
+                  value={password}
+                  style={styles.input}
+                  onChangeText={setPassword}
+                  underlineColor="transparent"
+                  activeUnderlineColor="transparent"
+                  contentStyle={styles.inputContent}
+                  textColor="#A1A1AA"
+                  theme={{
+                    colors: {
+                      background: '#1f2937',
+                    }
+                  }}
+                  right={
+                    <TextInput.Icon 
+                      icon={secureTextEntry ? "eye-off" : "eye"} 
+                      onPress={() => setSecureTextEntry(!secureTextEntry)}
+                      color="#9ca3af"
+                    />
+                  }
+                />
+              </View>
+            </View>
 
-        <Button mode="contained" style={styles.button} onPress={handleAuth}>
-          {isSignUp ? "Sign Up" : "Sign In"}
-        </Button>
+            {/* Error Message */}
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={16} color="#ef4444" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
-        <Button mode="text" style={styles.switchModeButton} onPress={() => setIsSignUp(!isSignUp)}>
-          {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
-        </Button>
-      </View>
-    </KeyboardAvoidingView>
+            {/* Forgot Password */}
+            {!isSignUp && (
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Auth Button */}
+            <TouchableOpacity 
+              style={styles.authButton}
+              onPress={handleAuth}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.authButtonText}>
+                {isSignUp ? "Create Account" : "Sign In"}
+              </Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Switch Mode */}
+          <View style={styles.switchContainer}>
+            <Text style={styles.switchText}>
+              {isSignUp ? "Already have an account? " : "Don't have an account? "}
+            </Text>
+            <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
+              <Text style={styles.switchLink}>
+                {isSignUp ? "Sign In" : "Sign Up"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
-// Uygulama içinde kullanılan stil tanımlamaları
-const styles = StyleSheet.create ({
-  container:{
-    flex:1,
-    backgroundColor:"#f5f5f5",
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
   },
-  content:{
-    flex:1,
-    padding:16,
-    justifyContent: "center",
+  keyboardView: {
+    flex: 1,
   },
-  title:{
-    textAlign: "center",
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  formCard: {
+    backgroundColor: '#111',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#27272A',
+  },
+  title: {
+    color: '#F4F4F5',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: '#A1A1AA',
+    textAlign: 'center',
+    fontSize: 15,
+    marginBottom: 32,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#e2e8f0',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    position: 'relative',
+  },
+  inputIcon: {
+    position: 'absolute',
+    left: 16,
+    top: 20,
+    zIndex: 1,
+  },
+  input: {
+    backgroundColor: '##111111',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#27272A',
+    height: 56,
+  },
+  inputContent: {
+    paddingLeft: 44,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ef4444',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#27272A',
+  },
+  errorText: {
+    color: '#F4F4F5',
+    marginLeft: 8,
+    fontSize: 13,
+    flex: 1,
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
     marginBottom: 24,
   },
-  input:{
-    marginBottom: 16,
+  forgotPasswordText: {
+    color: '#818cf8',
+    fontWeight: '600',
+    fontSize: 14,
   },
-  button:{
-    marginTop: 8,
+  authButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#818CF8',
+    padding: 18,
+    borderRadius: 12,
+    marginBottom: 0,
+    gap: 8,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  switchModeButton:{
-    marginTop: 16,
+  authButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-})
-
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  switchText: {
+    color: '#94a3b8',
+    fontSize: 15,
+  },
+  switchLink: {
+    color: '#818cf8',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+});

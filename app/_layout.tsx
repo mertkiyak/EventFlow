@@ -33,9 +33,13 @@ export default function RootLayout() {
       <PaperProvider>
       <SafeAreaProvider>
       <RouteGuard> 
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
+         <Stack>
+                {/* AUTH SCREEN - HEADER GİZLİ */}
+                <Stack.Screen name="auth" options={{ headerShown: false }} />
+                
+                {/* TABS SCREEN - HEADER GİZLİ */}
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              </Stack>
       </RouteGuard>
       </SafeAreaProvider>
       </PaperProvider>
