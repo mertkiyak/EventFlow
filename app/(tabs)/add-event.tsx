@@ -1,5 +1,6 @@
 import { BUCKET_ID, COLLECTION_ID, DATABASE_ID, databases, PROJECT_ID, storage } from "@/lib/appwrite";
 import { useAuth } from "@/lib/auth-context";
+import { theme } from '@/lib/theme';
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -177,7 +178,6 @@ export default function AddEventScreen() {
     setLocationSuggestions([]);
   };
 
-  // Konum arama fonksiyonu
   const searchLocation = async (query: string) => {
     setSearchQuery(query);
     
@@ -188,7 +188,6 @@ export default function AddEventScreen() {
 
     setSearchingLocation(true);
     try {
-      // OpenStreetMap Nominatim API kullanarak konum arama
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=10&addressdetails=1`
       );
@@ -201,7 +200,6 @@ export default function AddEventScreen() {
     }
   };
 
-  // Arama listesinden konum seçme
   const selectLocationFromSearch = (item: any) => {
     const formattedAddress = item.display_name;
     setLocation(formattedAddress);
@@ -215,7 +213,6 @@ export default function AddEventScreen() {
     setLocationSuggestions([]);
   };
 
-  // Tüm formu temizle
   const clearForm = () => {
     Alert.alert(
       "Formu Temizle",
@@ -371,18 +368,28 @@ export default function AddEventScreen() {
                 <Ionicons name="create-outline" size={20} color="#818cf8" />
                 <Text style={styles.label}>Etkinlik Adı</Text>
               </View>
-              <TextInput
-                placeholder="Örn: Akşam Yemeği"
-                placeholderTextColor="#6b7280"
-                mode="outlined"
-                value={title}
-                onChangeText={setTitle}
-                style={styles.input}
-                outlineColor="#374151"
-                activeOutlineColor="#818cf8"
-                textColor="#f8fafc"
-                theme={{ colors: { background: '#1e293b' } }}
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  placeholder="Örn: Akşam Yemeği"
+                  placeholderTextColor="#6b7280"
+                  mode="outlined"
+                  value={title}
+                  onChangeText={setTitle}
+                  style={[styles.input, title && styles.inputWithClear]}
+                  outlineColor="#374151"
+                  activeOutlineColor="#818cf8"
+                  textColor="#f8fafc"
+                  theme={{ colors: { background: '#1e293b' } }}
+                />
+                {title ? (
+                  <TouchableOpacity 
+                    style={styles.clearButton}
+                    onPress={() => setTitle("")}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#94a3b8" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
 
             <View style={styles.gridRow}>
@@ -391,21 +398,29 @@ export default function AddEventScreen() {
                   <Ionicons name="calendar-outline" size={20} color="#818cf8" />
                   <Text style={styles.label}>Tarih</Text>
                 </View>
-                <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-                  <TextInput
-                    placeholder="gg/aa/yyyy"
-                    placeholderTextColor="#6b7280"
-                    mode="outlined"
-                    value={formatDate(date)}
-                    editable={false}
-                    style={styles.input}
-                    outlineColor="#374151"
-                    activeOutlineColor="#818cf8"
-                    textColor="#f8fafc"
-                    theme={{ colors: { background: '#1e293b' } }}
-                    pointerEvents="none"
-                  />
-                </TouchableOpacity>
+                <View style={styles.inputWrapper}>
+                  <TouchableOpacity onPress={() => setShowDatePicker(true)} style={{ flex: 1 }}>
+                    <TextInput
+                      placeholder="gg/aa/yyyy"
+                      placeholderTextColor="#6b7280"
+                      mode="outlined"
+                      value={formatDate(date)}
+                      editable={false}
+                      style={[styles.input, styles.inputWithClear]}
+                      outlineColor="#374151"
+                      activeOutlineColor="#818cf8"
+                      textColor="#f8fafc"
+                      theme={{ colors: { background: '#1e293b' } }}
+                      pointerEvents="none"
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.clearButton}
+                    onPress={() => setDate(new Date())}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#94a3b8" />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={[styles.inputGroup, styles.gridItem]}>
@@ -413,21 +428,29 @@ export default function AddEventScreen() {
                   <Ionicons name="time-outline" size={20} color="#818cf8" />
                   <Text style={styles.label}>Saat</Text>
                 </View>
-                <TouchableOpacity onPress={() => setShowTimePicker(true)}>
-                  <TextInput
-                    placeholder="--:--"
-                    placeholderTextColor="#6b7280"
-                    mode="outlined"
-                    value={formatTime(time)}
-                    editable={false}
-                    style={styles.input}
-                    outlineColor="#374151"
-                    activeOutlineColor="#818cf8"
-                    textColor="#f8fafc"
-                    theme={{ colors: { background: '#1e293b' } }}
-                    pointerEvents="none"
-                  />
-                </TouchableOpacity>
+                <View style={styles.inputWrapper}>
+                  <TouchableOpacity onPress={() => setShowTimePicker(true)} style={{ flex: 1 }}>
+                    <TextInput
+                      placeholder="--:--"
+                      placeholderTextColor="#6b7280"
+                      mode="outlined"
+                      value={formatTime(time)}
+                      editable={false}
+                      style={[styles.input, styles.inputWithClear]}
+                      outlineColor="#374151"
+                      activeOutlineColor="#818cf8"
+                      textColor="#f8fafc"
+                      theme={{ colors: { background: '#1e293b' } }}
+                      pointerEvents="none"
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.clearButton}
+                    onPress={() => setTime(new Date())}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#94a3b8" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -461,22 +484,35 @@ export default function AddEventScreen() {
                 <Ionicons name="location-outline" size={20} color="#818cf8" />
                 <Text style={styles.label}>Konum</Text>
               </View>
-              <TouchableOpacity onPress={() => setShowLocationModal(true)}>
-                <TextInput
-                  placeholder="Konum seçmek için dokunun"
-                  placeholderTextColor="#6b7280"
-                  mode="outlined"
-                  value={location}
-                  editable={false}
-                  style={styles.input}
-                  outlineColor="#374151"
-                  activeOutlineColor="#818cf8"
-                  textColor="#f8fafc"
-                  theme={{ colors: { background: '#1e293b' } }}
-                  right={<TextInput.Icon icon="chevron-right" color="#818cf8" />}
-                  pointerEvents="none"
-                />
-              </TouchableOpacity>
+              <View style={styles.inputWrapper}>
+                <TouchableOpacity onPress={() => setShowLocationModal(true)} style={{ flex: 1 }}>
+                  <TextInput
+                    placeholder="Konum seçmek için dokunun"
+                    placeholderTextColor="#6b7280"
+                    mode="outlined"
+                    value={location}
+                    editable={false}
+                    style={[styles.input, location && styles.inputWithClear]}
+                    outlineColor="#374151"
+                    activeOutlineColor="#818cf8"
+                    textColor="#f8fafc"
+                    theme={{ colors: { background: '#1e293b' } }}
+                    right={<TextInput.Icon icon="chevron-right" color="#818cf8" />}
+                    pointerEvents="none"
+                  />
+                </TouchableOpacity>
+                {location ? (
+                  <TouchableOpacity 
+                    style={styles.clearButton}
+                    onPress={() => {
+                      setLocation("");
+                      setSelectedLocation(null);
+                    }}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#94a3b8" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
@@ -484,20 +520,30 @@ export default function AddEventScreen() {
                 <Ionicons name="document-text-outline" size={20} color="#818cf8" />
                 <Text style={styles.label}>Açıklama</Text>
               </View>
-              <TextInput
-                placeholder="Etkinlik hakkında detaylar..."
-                placeholderTextColor="#6b7280"
-                mode="outlined"
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                numberOfLines={4}
-                style={[styles.input, styles.textArea]}
-                outlineColor="#374151"
-                activeOutlineColor="#818cf8"
-                textColor="#f8fafc"
-                theme={{ colors: { background: '#1e293b' } }}
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  placeholder="Etkinlik hakkında detaylar..."
+                  placeholderTextColor="#6b7280"
+                  mode="outlined"
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={4}
+                  style={[styles.input, styles.textArea, description && styles.inputWithClear]}
+                  outlineColor="#374151"
+                  activeOutlineColor="#818cf8"
+                  textColor="#f8fafc"
+                  theme={{ colors: { background: '#1e293b' } }}
+                />
+                {description ? (
+                  <TouchableOpacity 
+                    style={[styles.clearButton, styles.clearButtonTextArea]}
+                    onPress={() => setDescription("")}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#94a3b8" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
 
             {error && (
@@ -582,7 +628,6 @@ export default function AddEventScreen() {
           </View>
         </Modal>
 
-        {/* Manuel Konum Arama Modal */}
         <Modal 
           visible={showManualLocationModal} 
           onDismiss={() => {
@@ -671,11 +716,10 @@ export default function AddEventScreen() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -683,9 +727,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#1e293b',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: theme.colors.border,
   },
   headerButton: {
     width: 40,
@@ -694,7 +738,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#f8fafc',
+    color: theme.colors.textPrimary,
     fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
@@ -709,7 +753,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 240,
     position: 'relative',
-    backgroundColor: '#1e293b',
+    backgroundColor: theme.colors.surface,
   },
   heroImage: {
     width: '100%',
@@ -724,30 +768,30 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 2,
-    borderBottomColor: '#334155',
+    borderBottomColor: theme.colors.border,
   },
   iconCircle: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#2d3748',
+    backgroundColor: theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#374151',
+    borderColor: theme.colors.border,
   },
   heroPlaceholderTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#f8fafc',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   heroPlaceholderSubtitle: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
   },
   removeImageButton: {
     position: 'absolute',
@@ -786,11 +830,30 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#e2e8f0',
+    color: theme.colors.textPrimary,
+  },
+  inputWrapper: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   input: {
-    backgroundColor: '#1e293b',
+    backgroundColor: theme.colors.surface,
     fontSize: 15,
+    flex: 1,
+  },
+  inputWithClear: {
+    paddingRight: 40,
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 12,
+    top: 16,
+    zIndex: 10,
+    padding: 4,
+  },
+  clearButtonTextArea: {
+    top: 16,
   },
   gridRow: {
     flexDirection: 'row',
@@ -807,16 +870,16 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#7f1d1d',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     padding: 12,
     borderRadius: 12,
     marginBottom: 20,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#991b1b',
+    borderColor: theme.colors.error,
   },
   errorText: {
-    color: '#fca5a5',
+    color: theme.colors.error,
     fontSize: 13,
     flex: 1,
   },
@@ -824,22 +887,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6366f1',
+    backgroundColor: theme.colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 10,
-    shadowColor: '#6366f1',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 4,
   },
   submitButtonDisabled: {
-    backgroundColor: '#475569',
+    backgroundColor: theme.colors.border,
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#fff',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -847,38 +910,38 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#1e293b',
+    backgroundColor: theme.colors.surface,
     borderRadius: 20,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: theme.colors.border,
   },
   modalTitle: {
-    color: '#f8fafc',
+    color: theme.colors.textPrimary,
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
   },
   modalSubtitle: {
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
   },
   locationOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0f172a',
+    backgroundColor: theme.colors.background,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: theme.colors.border,
   },
   locationOptionIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#1e293b',
+    backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -887,13 +950,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   locationOptionTitle: {
-    color: '#f8fafc',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
   locationOptionSubtitle: {
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     fontSize: 13,
   },
   modalCancelButton: {
@@ -919,13 +982,13 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   searchInput: {
-    backgroundColor: '#0f172a',
+    backgroundColor: theme.colors.background,
     borderRadius: 12,
     paddingLeft: 48,
     paddingRight: 48,
     fontSize: 15,
     borderWidth: 1.5,
-    borderColor: '#374151',
+    borderColor: theme.colors.border,
     height: 56,
   },
   searchLoader: {
@@ -940,24 +1003,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#0f172a',
+    backgroundColor: theme.colors.background,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: theme.colors.border,
     gap: 12,
   },
   suggestionTextContainer: {
     flex: 1,
   },
   suggestionName: {
-    color: '#f8fafc',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
   suggestionAddress: {
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     fontSize: 13,
   },
   noResultsContainer: {
@@ -966,14 +1029,14 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   noResultsText: {
-    color: '#e2e8f0',
+    color: theme.colors.textPrimary,
     fontSize: 18,
     fontWeight: '600',
     marginTop: 16,
     marginBottom: 8,
   },
   noResultsSubtext: {
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     fontSize: 14,
   },
 });

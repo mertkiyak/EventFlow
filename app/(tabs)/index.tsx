@@ -6,6 +6,7 @@ import {
   RealTimeEventResponse,
 } from "@/lib/appwrite";
 import { useAuth } from "@/lib/auth-context";
+import { theme } from "@/lib/theme";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEffect, useState } from "react";
 import { FlatList, Image, SafeAreaView, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
@@ -298,15 +299,15 @@ export default function Index() {
           {event.title}
         </Text>
         <View style={styles.infoRow}>
-          <MaterialCommunityIcons name="calendar" size={16} color="#9CA3AF" />
+          <MaterialCommunityIcons name="calendar" size={16} color={theme.colors.textSecondary} />
           <Text style={styles.infoText}>{formatDate(event.event_date)}</Text>
         </View>
         <View style={styles.infoRow}>
-          <MaterialCommunityIcons name="clock-outline" size={16} color="#9CA3AF" />
+          <MaterialCommunityIcons name="clock-outline" size={16} color={theme.colors.textSecondary} />
           <Text style={styles.infoText}>{formatTime(event.event_date)}</Text>
         </View>
         <View style={styles.infoRow}>
-          <MaterialCommunityIcons name="map-marker" size={16} color="#9CA3AF" />
+          <MaterialCommunityIcons name="map-marker" size={16} color={theme.colors.textSecondary} />
           <Text style={styles.infoText} numberOfLines={1}>
             {event.location || "Konum belirtilmemiş"}
           </Text>
@@ -316,8 +317,8 @@ export default function Index() {
             mode="contained"
             onPress={() => handleJoinEvent(event.$id)}
             style={styles.joinButton}
-            buttonColor="#3B82F6"
-            textColor="#fff"
+            buttonColor={theme.colors.primary}
+            textColor={theme.colors.textPrimary}
           >
             Katıl
           </Button>
@@ -344,7 +345,7 @@ export default function Index() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft} />
@@ -356,7 +357,7 @@ export default function Index() {
             <IconButton 
               icon="bell-outline" 
               size={24} 
-              iconColor="#FFFFFF"
+              iconColor={theme.colors.textPrimary}
               onPress={() => setIsNotificationsVisible(true)} 
             />
             {unreadCount > 0 && (
@@ -377,7 +378,7 @@ export default function Index() {
           <Text style={styles.sectionTitle}>Benim Eklediğim Etkinlikler</Text>
           {myEvents.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="calendar-blank" size={48} color="#9CA3AF" />
+              <MaterialCommunityIcons name="calendar-blank" size={48} color={theme.colors.textSecondary} />
               <Text style={styles.emptyText}>Henüz etkinlik eklemediniz</Text>
             </View>
           ) : (
@@ -400,7 +401,7 @@ export default function Index() {
           <Text style={styles.sectionTitle}>İlgi Alanlarıma Göre Etkinlikler</Text>
           {recommendedEvents.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="star-outline" size={48} color="#9CA3AF" />
+              <MaterialCommunityIcons name="star-outline" size={48} color={theme.colors.textSecondary} />
               <Text style={styles.emptyText}>Öneri bulunamadı</Text>
             </View>
           ) : (
@@ -415,7 +416,7 @@ export default function Index() {
           <Text style={styles.sectionTitle}>Yaklaşan Etkinlikler</Text>
           {upcomingEvents.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="calendar-clock" size={48} color="#9CA3AF" />
+              <MaterialCommunityIcons name="calendar-clock" size={48} color={theme.colors.textSecondary} />
               <Text style={styles.emptyText}>Yaklaşan etkinlik yok</Text>
             </View>
           ) : (
@@ -443,15 +444,15 @@ export default function Index() {
                 <Text style={styles.modalTitle}>{selectedEvent.title}</Text>
                 
                 <View style={styles.infoRow}>
-                  <MaterialCommunityIcons name="calendar" size={18} color="#9CA3AF" />
+                  <MaterialCommunityIcons name="calendar" size={18} color={theme.colors.textSecondary} />
                   <Text style={styles.modalInfoText}>{formatDate(selectedEvent.event_date)}</Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <MaterialCommunityIcons name="clock-outline" size={18} color="#9CA3AF" />
+                  <MaterialCommunityIcons name="clock-outline" size={18} color={theme.colors.textSecondary} />
                   <Text style={styles.modalInfoText}>{formatTime(selectedEvent.event_date)}</Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <MaterialCommunityIcons name="map-marker" size={18} color="#9CA3AF" />
+                  <MaterialCommunityIcons name="map-marker" size={18} color={theme.colors.textSecondary} />
                   <Text style={styles.modalInfoText}>{selectedEvent.location}</Text>
                 </View>
 
@@ -463,7 +464,7 @@ export default function Index() {
                     mode="contained"
                     onPress={() => handleJoinEvent(selectedEvent.$id)}
                     style={styles.joinButton}
-                    buttonColor="#3B82F6"
+                    buttonColor={theme.colors.primary}
                   >
                     Etkinliğe Katıl
                   </Button>
@@ -473,7 +474,7 @@ export default function Index() {
                   mode="text"
                   onPress={handleCloseModal}
                   style={styles.modalCloseButton}
-                  textColor="#9CA3AF"
+                  textColor={theme.colors.textSecondary}
                 >
                   Kapat
                 </Button>
@@ -492,14 +493,14 @@ export default function Index() {
             <IconButton 
               icon="arrow-left" 
               size={24} 
-              iconColor="#FFFFFF"
+              iconColor={theme.colors.textPrimary}
               onPress={() => setIsNotificationsVisible(false)}
             />
             <Text style={styles.notificationsTitle}>Bildirimler</Text>
             {unreadCount > 0 && (
               <Button 
                 mode="text" 
-                textColor="#3B82F6"
+                textColor={theme.colors.primary}
                 onPress={markAllAsRead}
                 compact
               >
@@ -511,7 +512,7 @@ export default function Index() {
           
           {notifications.length === 0 ? (
             <View style={styles.emptyNotifications}>
-              <MaterialCommunityIcons name="bell-off-outline" size={64} color="#6B7280" />
+              <MaterialCommunityIcons name="bell-off-outline" size={64} color={theme.colors.textSecondary} />
               <Text style={styles.emptyNotificationsText}>Henüz bildirim yok</Text>
             </View>
           ) : (
@@ -531,7 +532,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: "row",
@@ -540,13 +541,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: 16,
     paddingBottom: 8,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   headerLeft: {
     width: 48,
   },
   headerTitle: {
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: theme.colors.textPrimary,
     flex: 1,
     textAlign: "center",
     fontSize: 20,
@@ -561,7 +565,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.colors.error,
   },
   scrollContent: {
     paddingBottom: 24,
@@ -573,7 +577,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: theme.colors.textPrimary,
     marginBottom: 16,
   },
   horizontalScroll: {
@@ -584,15 +588,17 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   card: {
-    backgroundColor: "#1F1F1F",
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   eventImage: {
     width: "100%",
     height: 160,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: theme.colors.border,
   },
   cardContent: {
     padding: 16,
@@ -600,7 +606,7 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: theme.colors.textPrimary,
     marginBottom: 12,
   },
   infoRow: {
@@ -610,7 +616,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: "#9CA3AF",
+    color: theme.colors.textSecondary,
     marginLeft: 8,
   },
   joinButton: {
@@ -621,27 +627,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 32,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   emptyText: {
     fontSize: 14,
-    color: "#6B7280",
+    color: theme.colors.textSecondary,
     marginTop: 8,
   },
   
   // Etkinlik Modal Stilleri
   modalContainer: {
-    backgroundColor: '#1F1F1F',
+    backgroundColor: theme.colors.surface,
     marginHorizontal: 20,
     marginVertical: 40,
     borderRadius: 16,
     maxHeight: '85%',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   modalImage: {
     width: '100%',
     height: 200,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+    backgroundColor: theme.colors.border,
   },
   modalContent: {
     padding: 20,
@@ -649,24 +662,24 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     marginBottom: 16,
   },
   modalInfoText: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
     marginLeft: 10,
   },
   modalDescriptionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   modalDescription: {
     fontSize: 14,
-    color: '#D1D5DB',
+    color: theme.colors.textSecondary,
     lineHeight: 22,
     marginBottom: 20,
   },
@@ -676,7 +689,7 @@ const styles = StyleSheet.create({
 
   // Bildirimler Modal Stilleri
   notificationsModal: {
-    backgroundColor: '#101722',
+    backgroundColor: theme.colors.background,
     margin: 0,
     height: '100%',
   },
@@ -686,13 +699,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 8,
     paddingVertical: 8,
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: theme.colors.border,
   },
   notificationsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     flex: 1,
     textAlign: 'center',
   },
@@ -701,11 +715,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: theme.colors.border,
     position: 'relative',
+    backgroundColor: theme.colors.background,
   },
   notificationItemNew: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: 'rgba(129, 140, 248, 0.08)',
   },
   newIndicator: {
     position: 'absolute',
@@ -713,13 +728,15 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 4,
-    backgroundColor: '#3B82F6',
+    backgroundColor: theme.colors.primary,
   },
   notificationAvatar: {
     width: 56,
     height: 56,
     borderRadius: 28,
     marginRight: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
   },
   notificationContent: {
     flex: 1,
@@ -728,15 +745,15 @@ const styles = StyleSheet.create({
   notificationName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
   },
   notificationMessage: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: theme.colors.textSecondary,
   },
   notificationTime: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: theme.colors.textSecondary,
     marginLeft: 8,
   },
   emptyNotifications: {
@@ -747,7 +764,7 @@ const styles = StyleSheet.create({
   },
   emptyNotificationsText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     marginTop: 16,
   },
 });

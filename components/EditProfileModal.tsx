@@ -1,15 +1,16 @@
+import { theme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export interface ProfileData {
@@ -177,7 +178,6 @@ export default function EditProfileModal({
     </Modal>
   );
 }
-
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#1f1f1f',
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '95%',
@@ -196,10 +196,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: theme.colors.border,
   },
   modalTitle: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -220,13 +220,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#386ae0ff',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   changeAvatarText: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -234,19 +234,19 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: `${theme.colors.border}4d`,
     borderRadius: 12,
     padding: 16,
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: theme.colors.border,
   },
   textArea: {
     height: 100,
@@ -259,16 +259,16 @@ const styles = StyleSheet.create({
   },
   interestInputField: {
     flex: 1,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: `${theme.colors.border}4d`,
     borderRadius: 12,
     padding: 16,
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: theme.colors.border,
   },
   addButton: {
-    backgroundColor: '#386ae0ff',
+    backgroundColor: theme.colors.primary,
     width: 50,
     height: 50,
     borderRadius: 12,
@@ -283,14 +283,14 @@ const styles = StyleSheet.create({
   interestChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4d4c4cff',
+    backgroundColor: theme.colors.border,
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 12,
     gap: 8,
   },
   interestText: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 14,
   },
 });

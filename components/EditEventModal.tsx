@@ -1,4 +1,5 @@
 import { EditEventData } from '@/app/(tabs)/profile';
+import { theme } from '@/lib/theme';
 import { Dispatch, SetStateAction } from 'react';
 import {
   Modal,
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   container: {
-    backgroundColor: '#343434ff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 24,
     padding: 20,
     width: '100%',
@@ -174,18 +175,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#fff',
+    color: theme.colors.textPrimary,
   },
   closeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#343434ff',
+    backgroundColor: theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButtonText: {
-    color: '#fff',
+    color: theme.colors.textPrimary,
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -193,19 +194,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    color: '#c2c2c2ff',
+    color: theme.colors.textSecondary,
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#3b3b3bff',
+    backgroundColor: `${theme.colors.border}4d`,
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
-    color: '#fff',
+    color: theme.colors.textPrimary,
     borderWidth: 1,
-    borderColor: '#464646ff',
+    borderColor: theme.colors.border,
   },
   textArea: {
     height: 100,
@@ -223,20 +224,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#464646ff',
+    backgroundColor: theme.colors.border,
     borderWidth: 1,
-    borderColor: '#434343ff',
+    borderColor: theme.colors.border,
   },
   cancelButtonText: {
-    color: '#ffffffff',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#3b82f6ff',
+    backgroundColor: theme.colors.primary,
   },
   saveButtonText: {
-    color: '#ffffffff',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: '700',
   },

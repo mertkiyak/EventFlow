@@ -1,6 +1,7 @@
 import { COLLECTION_ID, DATABASE_ID, databases, USERS_COLLECTION_ID } from '@/lib/appwrite';
 import { useAuth } from '@/lib/auth-context';
 import messageService from '@/lib/messageService';
+import { theme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -436,7 +437,7 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -451,7 +452,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
   },
   headerSpacer: {
     width: 40,
@@ -459,20 +460,22 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1F1F1F',
+    backgroundColor: theme.colors.surface,
     marginHorizontal: 16,
     marginBottom: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     gap: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     fontSize: 16,
   },
   content: {
@@ -486,7 +489,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: 16,
   },
@@ -501,21 +504,23 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     paddingHorizontal: 16,
     marginBottom: 12,
   },
   highlight: {
     fontWeight: 'bold',
-    color: '#3B82F6',
+    color: theme.colors.primary,
   },
   userItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#1F1F1F',
+    backgroundColor: theme.colors.surface,
     marginBottom: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   userAvatar: {
     width: 56,
@@ -529,7 +534,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     marginBottom: 4,
   },
   locationRow: {
@@ -539,14 +544,16 @@ const styles = StyleSheet.create({
   },
   userLocation: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
   },
   eventItem: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#1F1F1F',
+    backgroundColor: theme.colors.surface,
     marginBottom: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   eventImage: {
     width: 80,
@@ -561,7 +568,7 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   eventMeta: {
@@ -572,11 +579,11 @@ const styles = StyleSheet.create({
   },
   eventDate: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
   },
   eventLocation: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
     flex: 1,
   },
   modalOverlay: {
@@ -585,7 +592,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1F1F1F',
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
@@ -608,7 +615,7 @@ const styles = StyleSheet.create({
   modalName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   modalLocationRow: {
@@ -618,10 +625,10 @@ const styles = StyleSheet.create({
   },
   modalLocation: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
   },
   modalBio: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: theme.colors.border,
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
@@ -629,19 +636,19 @@ const styles = StyleSheet.create({
   modalBioTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   modalBioText: {
     fontSize: 15,
-    color: '#D1D5DB',
+    color: theme.colors.textSecondary,
     lineHeight: 22,
   },
   messageButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3B82F6',
+    backgroundColor: theme.colors.primary,
     padding: 16,
     borderRadius: 12,
     gap: 8,
@@ -652,7 +659,7 @@ const styles = StyleSheet.create({
   messageButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
   },
   modalEventImage: {
     width: '100%',
@@ -666,7 +673,7 @@ const styles = StyleSheet.create({
   modalEventTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
   },
   modalEventMeta: {
     flexDirection: 'row',
@@ -675,10 +682,10 @@ const styles = StyleSheet.create({
   },
   modalEventMetaText: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
   },
   modalEventDescription: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: theme.colors.border,
     borderRadius: 12,
     padding: 16,
     marginTop: 8,
@@ -686,12 +693,12 @@ const styles = StyleSheet.create({
   modalEventDescriptionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   modalEventDescriptionText: {
     fontSize: 15,
-    color: '#D1D5DB',
+    color: theme.colors.textSecondary,
     lineHeight: 22,
   },
   eventOwnerSection: {
@@ -700,13 +707,13 @@ const styles = StyleSheet.create({
   eventOwnerTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     marginBottom: 12,
   },
   eventOwnerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2A2A2A',
+    backgroundColor: theme.colors.border,
     padding: 12,
     borderRadius: 12,
   },
@@ -722,11 +729,11 @@ const styles = StyleSheet.create({
   eventOwnerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     marginBottom: 4,
   },
   eventOwnerLocation: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: theme.colors.textSecondary,
   },
 });

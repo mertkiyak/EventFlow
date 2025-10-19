@@ -1,4 +1,5 @@
 import { useAuth } from "@/lib/auth-context";
+import { theme } from '@/lib/theme';
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -184,7 +185,7 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: theme.colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   formCard: {
-    backgroundColor: '#111',
+    backgroundColor: theme.colors.surface,
     borderRadius: 20,
     padding: 24,
     shadowColor: '#000',
@@ -204,16 +205,16 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#27272A',
+    borderColor: theme.colors.border,
   },
   title: {
-    color: '#F4F4F5',
+    color: theme.colors.textPrimary,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    color: '#A1A1AA',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     fontSize: 15,
     marginBottom: 32,
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#e2e8f0',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -238,10 +239,10 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   input: {
-    backgroundColor: '##111111',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#27272A',
+    borderColor: theme.colors.border,
     height: 56,
   },
   inputContent: {
@@ -250,15 +251,15 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ef4444',
+    backgroundColor: `${theme.colors.error}20`, // 12% opacity
     padding: 12,
     borderRadius: 10,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#27272A',
+    borderColor: theme.colors.error,
   },
   errorText: {
-    color: '#F4F4F5',
+    color: theme.colors.error,
     marginLeft: 8,
     fontSize: 13,
     flex: 1,
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: '#818cf8',
+    color: theme.colors.primary,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -276,19 +277,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#818CF8',
+    backgroundColor: theme.colors.primary,
     padding: 18,
     borderRadius: 12,
     marginBottom: 0,
     gap: 8,
-    shadowColor: '#6366f1',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 4,
   },
   authButtonText: {
-    color: '#fff',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -299,11 +300,11 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   switchText: {
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     fontSize: 15,
   },
   switchLink: {
-    color: '#818cf8',
+    color: theme.colors.primary,
     fontSize: 15,
     fontWeight: 'bold',
   },

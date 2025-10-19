@@ -2,6 +2,7 @@ import EditEventModal from "@/components/EditEventModal";
 import EditProfileModal, { ProfileData } from "@/components/EditProfileModal";
 import { COLLECTION_ID, DATABASE_ID, databases, USERS_COLLECTION_ID } from "@/lib/appwrite";
 import { useAuth } from "@/lib/auth-context";
+import { theme } from '@/lib/theme';
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -426,11 +427,10 @@ const createUserProfile = async () => {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000ff",
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: "row",
@@ -439,13 +439,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: Platform.OS === 'ios' ? 8 : 16,
     paddingBottom: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.95)",
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   headerButton: {
     margin: 0,
   },
   headerTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 20,
     fontWeight: "bold",
     flex: 1,
@@ -464,7 +466,7 @@ const styles = StyleSheet.create({
     height: 128,
     borderRadius: 64,
     borderWidth: 4,
-    borderColor: "rgba(56, 106, 224, 0.5)",
+    borderColor: `${theme.colors.primary}80`, // 50% opacity
     marginBottom: 16,
     overflow: "hidden",
   },
@@ -477,7 +479,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   name: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 24,
     fontWeight: "bold",
   },
@@ -487,49 +489,53 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   location: {
-    color: "#9eb7a8",
+    color: theme.colors.textSecondary,
     fontSize: 16,
   },
   statsContainer: {
     flexDirection: "row",
-    backgroundColor: "#1f1f1f",
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     justifyContent: "space-around",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   statItem: {
     alignItems: "center",
     flex: 1,
   },
   statNumber: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 4,
   },
   statLabel: {
-    color: "#9eb7a8",
+    color: theme.colors.textSecondary,
     fontSize: 14,
   },
   statDivider: {
     width: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: theme.colors.border,
   },
   card: {
-    backgroundColor: "#1f1f1f",
+    backgroundColor: theme.colors.surface,
     borderRadius: 24,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   cardTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 12,
   },
   bioText: {
-    color: "#c2d3c9",
+    color: theme.colors.textSecondary,
     fontSize: 16,
     lineHeight: 24,
   },
@@ -539,13 +545,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   interestChip: {
-    backgroundColor: "#4d4c4cff",
+    backgroundColor: `${theme.colors.primary}20`, // 12% opacity
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: `${theme.colors.primary}40`, // 25% opacity
   },
   interestText: {
-    color: "#fff",
+    color: theme.colors.primary,
     fontSize: 14,
     fontWeight: "500",
   },
@@ -555,28 +563,30 @@ const styles = StyleSheet.create({
   eventCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#4d4c4cff",
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     padding: 12,
     gap: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   eventImage: {
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: "#272727ff",
+    backgroundColor: theme.colors.border,
   },
   eventInfo: {
     flex: 1,
   },
   eventTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 4,
   },
   eventDate: {
-    color: "#bababaff",
+    color: theme.colors.textSecondary,
     fontSize: 14,
   },
   eventActions: {
@@ -592,13 +602,13 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
   },
   emptyText: {
-    color: "#6B7280",
+    color: theme.colors.textSecondary,
     fontSize: 14,
     marginTop: 8,
   },
   signOutButton: {
     marginTop: 16,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: theme.colors.border,
     borderRadius: 12,
   },
 });

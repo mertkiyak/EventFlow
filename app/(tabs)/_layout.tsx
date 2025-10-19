@@ -1,4 +1,4 @@
-
+import { theme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform, StatusBar } from 'react-native';
@@ -7,19 +7,19 @@ export default function TabLayout() {
   return (
     <>
       {/* Status Bar'ı karanlık yap */}
-      <StatusBar barStyle="light-content" backgroundColor="#111714" />
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
       
       <Tabs
         screenOptions={{
           // Header'ı gizle
-          headerShown: false, // BU SATIRI EKLEDİM
+          headerShown: false,
           
           // Tab bar ayarları
-          tabBarActiveTintColor: '#386ae0ff', // Aktif tab rengi (yeşil)
-          tabBarInactiveTintColor: '#6B7280', // Pasif tab rengi (gri)
+          tabBarActiveTintColor: theme.colors.primary, // Aktif tab rengi
+          tabBarInactiveTintColor: theme.colors.textSecondary, // Pasif tab rengi
           tabBarStyle: {
-            backgroundColor: '#242424ff', // Alt bar arka plan rengi (siyah)
-            borderTopColor: '#242424ff', // Üst border rengi
+            backgroundColor: theme.colors.surface, // Alt bar arka plan rengi
+            borderTopColor: theme.colors.border, // Üst border rengi
             borderTopWidth: 1,
             height: Platform.OS === 'ios' ? 88 : 65,
             paddingBottom: Platform.OS === 'ios' ? 28 : 8,
@@ -80,7 +80,6 @@ export default function TabLayout() {
           name="profile"
           options={{
             title: 'Profile',
-            headerShown: false, // Profile'da zaten yoktu
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person" size={size} color={color} />
             ),

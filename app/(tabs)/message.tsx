@@ -1,12 +1,13 @@
 import { DATABASE_ID, databases } from '@/lib/appwrite';
 import { useAuth } from '@/lib/auth-context';
 import messageService, { Message } from '@/lib/messageService';
+import { theme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"; // Buraya users collection ID'nizi yazın
 // Appwrite Collection ID'lerini buraya ekleyin
-const USERS_COLLECTION_ID = "68e85ad500181492effc"; // Buraya users collection ID'nizi yazın
+const USERS_COLLECTION_ID = "68e85ad500181492effc";
 
 interface UserProfile {
   $id: string;
@@ -42,36 +43,27 @@ export default function MessageScreen() {
   useEffect(() => {
     if (!user) return;
     loadConversations();
-  }, [user]);
+  }, [user]); 
+;
   // URL parametrelerinden gelen kullanıcıyı otomatik seç
-  useEffect(() => {
-    if (params.selectedUserId && conversations.length > 0) {
-      console.log('Looking for user from params:', params.selectedUserId);
-      
-      // Önce conversations'da var mı kontrol et
-      const existingConv = conversations.find(c => c.$id === params.selectedUserId);
-      if (existingConv) {
-        console.log('Found user in conversations:', existingConv.name);
-        setSelectedUser(existingConv);
-        return;
-      }
-      
-      // Yoksa params'tan oluştur
-      console.log('Creating user from params');
-      const userFromParams: ConversationUser = {
-        $id: params.selectedUserId as string,
-        name: params.selectedUserName as string || 'Kullanıcı',
-        email: params.selectedUserEmail as string || '',
-        avatar_url: params.selectedUserAvatar as string || undefined,
-        bio: params.selectedUserBio as string || undefined,
-        location: params.selectedUserLocation as string || undefined,
-        unreadCount: 0,
-        isOnline: false,
-      };
-      
-      setSelectedUser(userFromParams);
-    }
-  }, [params.selectedUserId, conversations]);
+useEffect(() => {
+  if (params.selectedUserId) {
+    console.log('User ID from params:', params.selectedUserId);
+    
+    const userFromParams: ConversationUser = {
+      $id: params.selectedUserId as string,
+      name: (params.selectedUserName as string) || 'Kullanıcı',
+      email: (params.selectedUserEmail as string) || '',
+      avatar_url: (params.selectedUserAvatar as string) || undefined,
+      bio: (params.selectedUserBio as string) || undefined,
+      location: (params.selectedUserLocation as string) || undefined,
+      unreadCount: 0,
+      isOnline: false,
+    };
+    
+    setSelectedUser(userFromParams);
+  }
+}, [params.selectedUserId]); // conversations'dan kaldır!
   // Kullanıcı seçildiğinde mesajları yükle
   useEffect(() => {
     if (!user || !selectedUser) return;
@@ -127,10 +119,11 @@ export default function MessageScreen() {
           userIds.add(msg.senderId);
         }
       });
-
+        console.log('Found user IDs:', Array.from(userIds));
       // Her kullanıcı için profil ve son mesaj bilgilerini al
       const conversationPromises = Array.from(userIds).map(async (userId) => {
         try {
+          console.log('Fetching user profile for:', userId);
           const userDoc = await databases.getDocument(
             DATABASE_ID,
             USERS_COLLECTION_ID,
@@ -591,11 +584,10 @@ export default function MessageScreen() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000ff',
+    backgroundColor: theme.colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -606,7 +598,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 16,
   },
 
@@ -617,19 +609,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: `${theme.colors.surface}cc`,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: theme.colors.border,
   },
   listHeaderTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     textAlign: 'center',
   },
   listHeaderButton: {
-    position: 'absolute', 
-    right: 20, 
+    position: 'absolute',
+    right: 20,
     padding: 0,
   },
 
@@ -639,7 +631,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#000000ff',
+    backgroundColor: theme.colors.background,
   },
   userItemLeft: {
     flexDirection: 'row',
@@ -662,9 +654,9 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#4ade80',
+    backgroundColor: theme.colors.accent,
     borderWidth: 2,
-    borderColor: '#000000ff',
+    borderColor: theme.colors.background,
   },
   userInfo: {
     flex: 1,
@@ -673,11 +665,11 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
   },
   userLastMessage: {
     fontSize: 15,
-    color: '#93c5fd',
+    color: theme.colors.secondary,
   },
   userItemRight: {
     alignItems: 'flex-end',
@@ -685,10 +677,10 @@ const styles = StyleSheet.create({
   },
   messageTime: {
     fontSize: 13,
-    color: '#93c5fd',
+    color: theme.colors.secondary,
   },
   unreadBadge: {
-    backgroundColor: '#386ae0ff',
+    backgroundColor: theme.colors.primary,
     minWidth: 22,
     height: 22,
     borderRadius: 11,
@@ -697,13 +689,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   unreadCount: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 12,
     fontWeight: 'bold',
   },
   separator: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: theme.colors.border,
     marginLeft: 88,
   },
 
@@ -713,9 +705,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'rgba(23, 23, 23, 0.8)',
+    backgroundColor: `${theme.colors.surface}cc`,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: theme.colors.border,
   },
   backButton: {
     padding: 4,
@@ -733,12 +725,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   headerName: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 18,
     fontWeight: 'bold',
   },
   headerStatus: {
-    color: '#4ade80',
+    color: theme.colors.accent,
     fontSize: 12,
   },
   headerButton: {
@@ -759,13 +751,13 @@ const styles = StyleSheet.create({
     paddingVertical: 100,
   },
   emptyText: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 18,
     fontWeight: 'bold',
     marginTop: 16,
   },
   emptySubText: {
-    color: '#93c5fd',
+    color: theme.colors.secondary,
     fontSize: 14,
     marginTop: 8,
   },
@@ -792,15 +784,15 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   myMessage: {
-    backgroundColor: '#386ae0ff',
+    backgroundColor: theme.colors.primary,
     borderBottomRightRadius: 4,
   },
   otherMessage: {
-    backgroundColor: '#434343ff',
+    backgroundColor: theme.colors.border,
     borderBottomLeftRadius: 4,
   },
   messageText: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     lineHeight: 22,
     marginBottom: 4,
@@ -812,21 +804,21 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   messageTimeInBubble: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: `${theme.colors.textPrimary}b3`,
     fontSize: 12,
   },
 
   inputContainer: {
     padding: 16,
     paddingBottom: Platform.OS === 'ios' ? 16 : 16,
-    backgroundColor: '#000000ff',
+    backgroundColor: theme.colors.background,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: theme.colors.border,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(67, 67, 67, 0.6)',
+    backgroundColor: `${theme.colors.surface}99`,
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -834,7 +826,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     maxHeight: 100,
     paddingVertical: 8,
@@ -843,7 +835,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   sendButton: {
-    backgroundColor: '#386ae0ff',
+    backgroundColor: theme.colors.primary,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -860,7 +852,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   profileModal: {
-    backgroundColor: '#1a1a1aff',
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '90%',
@@ -871,12 +863,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: theme.colors.border,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
   },
   profileContent: {
     padding: 20,
@@ -890,23 +882,23 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#386ae0ff',
+    borderColor: theme.colors.primary,
   },
   profileName: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
   profileStatus: {
     fontSize: 16,
-    color: '#4ade80',
+    color: theme.colors.accent,
     textAlign: 'center',
     marginBottom: 24,
   },
   infoSection: {
-    backgroundColor: 'rgba(67, 67, 67, 0.3)',
+    backgroundColor: `${theme.colors.border}4d`,
     borderRadius: 12,
     padding: 16,
     gap: 16,
@@ -919,10 +911,10 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 16,
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
   },
   followButton: {
-    backgroundColor: '#386ae0ff',
+    backgroundColor: theme.colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -932,15 +924,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   followingButton: {
-    backgroundColor: '#4ade80',
+    backgroundColor: theme.colors.accent,
   },
   followButtonText: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 18,
     fontWeight: 'bold',
   },
   bioSection: {
-    backgroundColor: 'rgba(67, 67, 67, 0.3)',
+    backgroundColor: `${theme.colors.border}4d`,
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
@@ -948,12 +940,12 @@ const styles = StyleSheet.create({
   bioTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   bioText: {
     fontSize: 15,
-    color: '#d1d5db',
+    color: theme.colors.textSecondary,
     lineHeight: 22,
   },
 });
@@ -962,128 +954,3 @@ const styles = StyleSheet.create({
 
 
 
-
-
-
-
-// import { DATABASE_ID, databases } from '@/lib/appwrite';
-// import { useAuth } from '@/lib/auth-context';
-// import messageService, { Message } from '@/lib/messageService';
-// import { Ionicons } from '@expo/vector-icons';
-// import { useLocalSearchParams } from 'expo-router';
-// import { useEffect, useRef, useState } from 'react';
-// import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-
-// const USERS_COLLECTION_ID = "68e85ad500181492effc";
-
-// interface UserProfile {
-//   $id: string;
-//   name: string;
-//   email: string;
-//   avatar_url?: string;
-//   bio?: string;
-//   location?: string;
-// }
-
-// interface ConversationUser extends UserProfile {
-//   lastMessage?: string;
-//   lastMessageTime?: Date;
-//   unreadCount: number;
-//   isOnline?: boolean;
-// }
-
-// export default function MessageScreen() {
-//   const { user } = useAuth();
-//   const params = useLocalSearchParams();
-//   const [selectedUser, setSelectedUser] = useState<ConversationUser | null>(null);
-//   const [showProfile, setShowProfile] = useState(false);
-//   const [isFollowing, setIsFollowing] = useState(false);
-//   const [messages, setMessages] = useState<Message[]>([]);
-//   const [messageText, setMessageText] = useState('');
-//   const [loading, setLoading] = useState(false);
-//   const [sending, setSending] = useState(false);
-//   const [conversations, setConversations] = useState<ConversationUser[]>([]);
-//   const [loadingConversations, setLoadingConversations] = useState(true);
-//   const scrollViewRef = useRef<ScrollView>(null);
-
-//   // Konuşmaları yükle
-//   useEffect(() => {
-//     if (!user) return;
-//     loadConversations();
-//   }, [user]);
-
-//   // URL parametrelerinden gelen kullanıcıyı otomatik seç
-//   useEffect(() => {
-//     if (params.selectedUserId && conversations.length > 0) {
-//       console.log('Looking for user from params:', params.selectedUserId);
-      
-//       // Önce conversations'da var mı kontrol et
-//       const existingConv = conversations.find(c => c.$id === params.selectedUserId);
-//       if (existingConv) {
-//         console.log('Found user in conversations:', existingConv.name);
-//         setSelectedUser(existingConv);
-//         return;
-//       }
-      
-//       // Yoksa params'tan oluştur
-//       console.log('Creating user from params');
-//       const userFromParams: ConversationUser = {
-//         $id: params.selectedUserId as string,
-//         name: params.selectedUserName as string || 'Kullanıcı',
-//         email: params.selectedUserEmail as string || '',
-//         avatar_url: params.selectedUserAvatar as string || undefined,
-//         bio: params.selectedUserBio as string || undefined,
-//         location: params.selectedUserLocation as string || undefined,
-//         unreadCount: 0,
-//         isOnline: false,
-//       };
-      
-//       setSelectedUser(userFromParams);
-//     }
-//   }, [params.selectedUserId, conversations]);
-
-//   // Kullanıcı seçildiğinde mesajları yükle
-//   useEffect(() => {
-//     if (!user || !selectedUser) return;
-
-//     loadMessages();
-    
-//     const conversationId = messageService.createConversationId(user.$id, selectedUser.$id);
-    
-//     const unsubscribe = messageService.subscribeToMessages(
-//       conversationId,
-//       (newMessage) => {
-//         setMessages((prev) => {
-//           if (prev.some(msg => msg.$id === newMessage.$id)) {
-//             return prev;
-//           }
-//           return [...prev, newMessage];
-//         });
-//         scrollToBottom();
-        
-//         if (newMessage.senderId !== user.$id) {
-//           messageService.markMessagesAsRead(user.$id, selectedUser.$id);
-//         }
-//       }
-//     );
-
-//     return () => {
-//       unsubscribe();
-//     };
-//   }, [user, selectedUser]);
-
-//   const loadConversations = async () => {
-//     if (!user) return;
-
-//     try {
-//       setLoadingConversations(true);
-      
-//       const sentMessages = await messageService.getMessagesBySender(user.$id);
-//       const receivedMessages = await messageService.getMessagesByReceiver(user.$id);
-      
-//       console.log('Sent messages:', sentMessages.length);
-//       console.log('Received messages:', receivedMessages.length);
-      
-//       const userIds = new Set<string>();
-      
-//       sentMessages.forEach((msg
