@@ -1,91 +1,92 @@
-import { DATABASE_ID, databases } from '@/lib/appwrite';
 import { useAuth } from '@/lib/auth-context';
-import messageService, { Message } from '@/lib/messageService';
+import messageService, { Conversation, Message, UserProfile } from '@/lib/messageService';
+import { createMessageNotification } from '@/lib/notifications';
 import { theme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"; // Buraya users collection ID'nizi yazın
-// Appwrite Collection ID'lerini buraya ekleyin
-const USERS_COLLECTION_ID = "68e85ad500181492effc";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
-interface UserProfile {
-  $id: string;
-  name: string;
-  email: string;
-  avatar_url?: string;
-  bio?: string;
-  location?: string;
-}
+const PROFILES_COLLECTION_ID = "68e85ad500181492effc";
 
-interface ConversationUser extends UserProfile {
-  lastMessage?: string;
-  lastMessageTime?: Date;
+interface ConversationWithProfile extends Conversation {
+  profile?: UserProfile;
   unreadCount: number;
-  isOnline?: boolean;
 }
 
 export default function MessageScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const params = useLocalSearchParams();
-  const [selectedUser, setSelectedUser] = useState<ConversationUser | null>(null);
+  
+  const [selectedConversation, setSelectedConversation] = useState<ConversationWithProfile | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const [showProfile, setShowProfile] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [conversations, setConversations] = useState<ConversationUser[]>([]);
+  const [conversations, setConversations] = useState<ConversationWithProfile[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  
   const scrollViewRef = useRef<ScrollView>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout  | undefined>(undefined);
 
   // Konuşmaları yükle
   useEffect(() => {
     if (!user) return;
     loadConversations();
-  }, [user]); 
-;
+  }, [user]);
+
   // URL parametrelerinden gelen kullanıcıyı otomatik seç
-useEffect(() => {
-  if (params.selectedUserId) {
-    console.log('User ID from params:', params.selectedUserId);
-    
-    const userFromParams: ConversationUser = {
-      $id: params.selectedUserId as string,
-      name: (params.selectedUserName as string) || 'Kullanıcı',
-      email: (params.selectedUserEmail as string) || '',
-      avatar_url: (params.selectedUserAvatar as string) || undefined,
-      bio: (params.selectedUserBio as string) || undefined,
-      location: (params.selectedUserLocation as string) || undefined,
-      unreadCount: 0,
-      isOnline: false,
-    };
-    
-    setSelectedUser(userFromParams);
-  }
-}, [params.selectedUserId]); // conversations'dan kaldır!
-  // Kullanıcı seçildiğinde mesajları yükle
   useEffect(() => {
-    if (!user || !selectedUser) return;
+    if (params.selectedUserId && user) {
+      loadConversationFromParams();
+    }
+  }, [params.selectedUserId, user]);
+
+  // Kullanıcı seçildiğinde mesajları yükle ve realtime dinle
+  useEffect(() => {
+    if (!user || !selectedProfile) return;
 
     loadMessages();
     
-    const conversationId = messageService.createConversationId(user.$id, selectedUser.$id);
+    const conversationId = messageService.createConversationId(user.$id, selectedProfile.userId);
     
     const unsubscribe = messageService.subscribeToMessages(
       conversationId,
       (newMessage) => {
         setMessages((prev) => {
-          // Duplicate kontrolü
           if (prev.some(msg => msg.$id === newMessage.$id)) {
             return prev;
           }
           return [...prev, newMessage];
         });
+        
         scrollToBottom();
         
+        // Karşı taraftan gelen mesajları okundu işaretle
         if (newMessage.senderId !== user.$id) {
-          messageService.markMessagesAsRead(user.$id, selectedUser.$id);
+          messageService.markMessagesAsRead(user.$id, selectedProfile.userId);
         }
       }
     );
@@ -93,7 +94,50 @@ useEffect(() => {
     return () => {
       unsubscribe();
     };
-  }, [user, selectedUser]);
+  }, [user, selectedProfile]);
+
+  const loadConversationFromParams = async () => {
+    if (!user) return;
+
+    try {
+      const userId = params.selectedUserId as string;
+      let profile = await messageService.getProfile(userId);
+
+      if (!profile) {
+        // Profil yoksa varsayılan oluştur
+        profile = {
+          $id: userId,
+          userId: userId,
+          name: (params.selectedUserName as string) || 'Kullanıcı',
+          email: (params.selectedUserEmail as string) || '',
+          avatar_url: params.selectedUserAvatar as string,
+          bio: params.selectedUserBio as string,
+          location: params.selectedUserLocation as string,
+          age: 0,
+          interests: [],
+          followers: 0,
+          following: 0,
+          $createdAt: new Date().toISOString(),
+          $updatedAt: new Date().toISOString(),
+        };
+      }
+
+      setSelectedProfile(profile);
+
+      // Conversation oluştur veya getir
+      const conversation = await messageService.getOrCreateConversation(user.$id, userId);
+      const unreadCount = await messageService.getConversationUnreadCount(user.$id, userId);
+
+      setSelectedConversation({
+        ...conversation,
+        profile,
+        unreadCount,
+      });
+    } catch (error) {
+      console.error('Error loading conversation from params:', error);
+      Alert.alert('Hata', 'Konuşma yüklenirken bir hata oluştu');
+    }
+  };
 
   const loadConversations = async () => {
     if (!user) return;
@@ -101,99 +145,57 @@ useEffect(() => {
     try {
       setLoadingConversations(true);
       
-      // Kullanıcının tüm mesajlarını al (gönderdiği ve aldığı)
-      const sentMessages = await messageService.getMessagesBySender(user.$id);
-      const receivedMessages = await messageService.getMessagesByReceiver(user.$id);
+      const userConversations = await messageService.getUserConversations(user.$id);
       
-      // Tüm benzersiz kullanıcı ID'lerini topla
-      const userIds = new Set<string>();
-      
-      sentMessages.forEach((msg: Message) => {
-        if (msg.receiverId !== user.$id) {
-          userIds.add(msg.receiverId);
-        }
-      });
-      
-      receivedMessages.forEach((msg: Message) => {
-        if (msg.senderId !== user.$id) {
-          userIds.add(msg.senderId);
-        }
-      });
-        console.log('Found user IDs:', Array.from(userIds));
-      // Her kullanıcı için profil ve son mesaj bilgilerini al
-      const conversationPromises = Array.from(userIds).map(async (userId) => {
-        try {
-          console.log('Fetching user profile for:', userId);
-          const userDoc = await databases.getDocument(
-            DATABASE_ID,
-            USERS_COLLECTION_ID,
-            userId
-          );
+      const conversationsWithProfiles = await Promise.all(
+        userConversations.map(async (conv) => {
+          const otherUserId = conv.participants.find(id => id !== user.$id);
           
-          const userProfile: UserProfile = {
-            $id: userDoc.$id,
-            name: userDoc.name || 'İsimsiz Kullanıcı',
-            email: userDoc.email || '',
-            avatar_url: userDoc.avatar_url,
-            bio: userDoc.bio,
-            location: userDoc.location,
-          };
+          if (!otherUserId) return null;
 
-          // Bu kullanıcı ile olan tüm mesajları al
-          const allMessagesWithUser = [...sentMessages, ...receivedMessages]
-            .filter((msg: Message) => 
-              msg.senderId === userId || msg.receiverId === userId
-            )
-            .sort((a: Message, b: Message) => 
-              new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime()
-            );
-
-          const lastMessage = allMessagesWithUser[0];
-          
-          // Okunmamış mesaj sayısı
-          const unreadCount = receivedMessages.filter(
-            (msg: Message) => msg.senderId === userId && !msg.isRead
-          ).length;
+          const profile = await messageService.getProfile(otherUserId);
+          const unreadCount = await messageService.getConversationUnreadCount(user.$id, otherUserId);
 
           return {
-            ...userProfile,
-            lastMessage: lastMessage?.text || '',
-            lastMessageTime: lastMessage ? new Date(lastMessage.$createdAt) : new Date(),
+            ...conv,
+            profile,
             unreadCount,
-            isOnline: Math.random() > 0.5, // Bu kısmı presence sistemi ile değiştirebilirsiniz
-          } as ConversationUser;
-        } catch (error) {
-          console.error(`Error fetching user ${userId}:`, error);
-          return null;
-        }
-      });
+          } as ConversationWithProfile;
+        })
+      );
 
-      const conversationResults = await Promise.all(conversationPromises);
-      const validConversations = conversationResults
-        .filter((conv): conv is ConversationUser => conv !== null)
+      const validConversations = conversationsWithProfiles
+        .filter((conv): conv is ConversationWithProfile => conv !== null)
         .sort((a, b) => {
-          const timeA = a.lastMessageTime?.getTime() || 0;
-          const timeB = b.lastMessageTime?.getTime() || 0;
+          const timeA = new Date(a.lastMessageTime || 0).getTime();
+          const timeB = new Date(b.lastMessageTime || 0).getTime();
           return timeB - timeA;
         });
 
       setConversations(validConversations);
     } catch (error) {
       console.error('Error loading conversations:', error);
+      Alert.alert('Hata', 'Konuşmalar yüklenirken bir hata oluştu');
     } finally {
       setLoadingConversations(false);
     }
   };
 
   const loadMessages = async () => {
-    if (!user || !selectedUser) return;
+    if (!user || !selectedProfile) return;
     
     try {
       setLoading(true);
-      const fetchedMessages = await messageService.getMessages(user.$id, selectedUser.$id);
+      const fetchedMessages = await messageService.getMessages(
+        user.$id, 
+        selectedProfile.userId,
+        50,
+        0
+      );
+      
       setMessages(fetchedMessages);
       
-      await messageService.markMessagesAsRead(user.$id, selectedUser.$id);
+      await messageService.markMessagesAsRead(user.$id, selectedProfile.userId);
       
       scrollToBottom();
     } catch (error) {
@@ -205,29 +207,90 @@ useEffect(() => {
   };
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !user || !selectedUser || sending) return;
+    if (!messageText.trim() || !user || !selectedProfile || sending) return;
 
     const textToSend = messageText.trim();
     setMessageText('');
 
+    // Optimistic UI: Mesajı hemen göster
+    const optimisticMessage: Message = {
+      $id: `temp-${Date.now()}`,
+      senderId: user.$id,
+      receiverId: selectedProfile.userId,
+      text: textToSend,
+      conversationId: messageService.createConversationId(user.$id, selectedProfile.userId),
+      $createdAt: new Date().toISOString(),
+      isRead: false,
+      status: 'sent',
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+    scrollToBottom();
+
     try {
       setSending(true);
-      await messageService.sendMessage(user.$id, selectedUser.$id, textToSend);
-      scrollToBottom();
       
-      // Konuşmaları yenile
+      const sentMessage = await messageService.sendMessage(
+        user.$id,
+        selectedProfile.userId,
+        textToSend
+      );
+
+      // Optimistic mesajı gerçek mesajla değiştir
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.$id === optimisticMessage.$id ? sentMessage : msg
+        )
+      );
+
+      // Bildirim gönder
+      try {
+        await createMessageNotification(
+          selectedProfile.userId,
+          user.name || 'Bir kullanıcı',
+          sentMessage.$id,
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=random`
+        );
+      } catch (notifError) {
+        console.warn('Notification error:', notifError);
+      }
+
       loadConversations();
     } catch (error: any) {
       console.error('Error sending message:', error);
+      
+      // Optimistic mesajı kaldır
+      setMessages(prev => prev.filter(msg => msg.$id !== optimisticMessage.$id));
+      
       Alert.alert(
-        'Hata', 
-        error.message || 'Mesaj gönderilemedi. Lütfen tekrar deneyin.',
+        'Hata',
+        error.message || 'Mesaj gönderilemedi',
         [{ text: 'Tamam' }]
       );
+      
       setMessageText(textToSend);
     } finally {
       setSending(false);
     }
+  };
+
+  const handleTyping = (text: string) => {
+    setMessageText(text);
+
+    // Typing indicator logic
+    if (!isTyping && text.trim()) {
+      setIsTyping(true);
+      // TODO: Publish typing event
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      // TODO: Publish stopped typing event
+    }, 2000)as unknown as NodeJS.Timeout;
   };
 
   const scrollToBottom = () => {
@@ -236,24 +299,23 @@ useEffect(() => {
     }, 100);
   };
 
-  const handleFollowToggle = () => {
-    setIsFollowing(!isFollowing);
-  };
-
-  const handleUserSelect = (selectedUser: ConversationUser) => {
-    setSelectedUser(selectedUser);
-    setMessages([]);
-  };
-
   const handleBackToList = () => {
-    setSelectedUser(null);
+    setSelectedConversation(null);
+    setSelectedProfile(null);
     setMessages([]);
-    loadConversations(); // Listeye dönerken konuşmaları yenile
+    loadConversations();
   };
 
-  const formatTime = (date: Date) => {
+  const handleConversationSelect = (conversation: ConversationWithProfile) => {
+    setSelectedConversation(conversation);
+    setSelectedProfile(conversation.profile || null);
+    setMessages([]);
+  };
+
+  const formatTime = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const diffMs = now.getTime() - dateObj.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
@@ -263,11 +325,11 @@ useEffect(() => {
     if (diffHours < 24) return `${diffHours} sa`;
     if (diffDays < 7) return `${diffDays} gün`;
     
-    return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+    return dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
   };
 
-  const getAvatarUrl = (avatarUrl?: string) => {
-    return avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser?.name || 'User')}&background=random`;
+  const getAvatarUrl = (avatarUrl?: string, name?: string) => {
+    return avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=random`;
   };
 
   if (!user) {
@@ -280,13 +342,12 @@ useEffect(() => {
     );
   }
 
-  // Kullanıcı listesi görünümü
-  if (!selectedUser) {
+  // Conversation list view
+  if (!selectedConversation || !selectedProfile) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#000000ff" />
+        <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
         
-        {/* Header */}
         <View style={styles.listHeader}>
           <Text style={styles.listHeaderTitle}>Mesajlar</Text>
           <TouchableOpacity 
@@ -297,14 +358,13 @@ useEffect(() => {
           </TouchableOpacity>
         </View>
 
-        {/* Kullanıcı Listesi */}
         {loadingConversations ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#386ae0ff" />
+            <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         ) : conversations.length === 0 ? (
           <View style={styles.centerContainer}>
-            <Ionicons name="chatbubbles-outline" size={64} color="#434343ff" />
+            <Ionicons name="chatbubbles-outline" size={64} color={theme.colors.secondary} />
             <Text style={styles.emptyText}>Henüz konuşma yok</Text>
             <Text style={styles.emptySubText}>Kullanıcılarla mesajlaşmaya başlayın</Text>
           </View>
@@ -315,26 +375,18 @@ useEffect(() => {
             renderItem={({ item }) => (
               <TouchableOpacity 
                 style={styles.userItem}
-                onPress={() => handleUserSelect(item)}
+                onPress={() => handleConversationSelect(item)}
                 activeOpacity={0.7}
               >
                 <View style={styles.userItemLeft}>
-                  <View style={styles.avatarContainer}>
-                    <Image 
-                      source={{ uri: getAvatarUrl(item.avatar_url) }}
-                      style={styles.userAvatar}
-                    />
-                    {item.isOnline && (
-                      <View style={styles.onlineIndicator} />
-                    )}
-                  </View>
+                  <Image 
+                    source={{ uri: getAvatarUrl(item.profile?.avatar_url, item.profile?.name) }}
+                    style={styles.userAvatar}
+                  />
                   
                   <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{item.name}</Text>
-                    <Text 
-                      style={styles.userLastMessage}
-                      numberOfLines={1}
-                    >
+                    <Text style={styles.userName}>{item.profile?.name || 'Kullanıcı'}</Text>
+                    <Text style={styles.userLastMessage} numberOfLines={1}>
                       {item.lastMessage || 'Mesaj yok'}
                     </Text>
                   </View>
@@ -355,24 +407,29 @@ useEffect(() => {
               </TouchableOpacity>
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
+            refreshControl={
+              <RefreshControl
+                refreshing={loadingConversations}
+                onRefresh={loadConversations}
+                tintColor={theme.colors.primary}
+              />
+            }
             showsVerticalScrollIndicator={false}
-            refreshing={loadingConversations}
-            onRefresh={loadConversations}
           />
         )}
       </SafeAreaView>
     );
   }
 
-  // Mesajlaşma ekranı
+  // Message view
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000ff" />
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
       
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={0}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -389,14 +446,16 @@ useEffect(() => {
             activeOpacity={0.7}
           >
             <Image 
-              source={{ uri: getAvatarUrl(selectedUser.avatar_url) }}
+              source={{ uri: getAvatarUrl(selectedProfile.avatar_url, selectedProfile.name) }}
               style={styles.headerAvatar}
             />
             <View>
-              <Text style={styles.headerName}>{selectedUser.name}</Text>
-              <Text style={styles.headerStatus}>
-                {selectedUser.isOnline ? 'Çevrimiçi' : 'Çevrimdışı'}
-              </Text>
+              <Text style={styles.headerName}>{selectedProfile.name}</Text>
+              {otherUserTyping ? (
+                <Text style={styles.headerTyping}>yazıyor...</Text>
+              ) : (
+                <Text style={styles.headerStatus}>Çevrimiçi</Text>
+              )}
             </View>
           </TouchableOpacity>
 
@@ -411,7 +470,7 @@ useEffect(() => {
         {/* Messages */}
         {loading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#386ae0ff" />
+            <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         ) : (
           <ScrollView 
@@ -423,7 +482,7 @@ useEffect(() => {
           >
             {messages.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="chatbubbles-outline" size={64} color="#434343ff" />
+                <Ionicons name="chatbubbles-outline" size={64} color={theme.colors.secondary} />
                 <Text style={styles.emptyText}>Henüz mesaj yok</Text>
                 <Text style={styles.emptySubText}>İlk mesajı göndererek sohbeti başlatın</Text>
               </View>
@@ -441,7 +500,7 @@ useEffect(() => {
                   >
                     {!isMyMessage && (
                       <Image 
-                        source={{ uri: getAvatarUrl(selectedUser.avatar_url) }}
+                        source={{ uri: getAvatarUrl(selectedProfile.avatar_url, selectedProfile.name) }}
                         style={styles.messageAvatar}
                       />
                     )}
@@ -460,9 +519,9 @@ useEffect(() => {
                         </Text>
                         {isMyMessage && (
                           <Ionicons 
-                            name={message.isRead ? "checkmark-done" : "checkmark"} 
+                            name={message.status === 'read' ? "checkmark-done" : "checkmark"} 
                             size={16} 
-                            color={message.isRead ? "#4ade80" : "#93c5fd"} 
+                            color={message.status === 'read' ? "#4ade80" : "#93c5fd"} 
                           />
                         )}
                       </View>
@@ -482,7 +541,7 @@ useEffect(() => {
               placeholder="Mesaj yazın..."
               placeholderTextColor="#93c5fd"
               value={messageText}
-              onChangeText={setMessageText}
+              onChangeText={handleTyping}
               multiline
               maxLength={1000}
             />
@@ -529,52 +588,31 @@ useEffect(() => {
             <ScrollView style={styles.profileContent}>
               <View style={styles.profileImageContainer}>
                 <Image 
-                  source={{ uri: getAvatarUrl(selectedUser.avatar_url) }}
+                  source={{ uri: getAvatarUrl(selectedProfile.avatar_url, selectedProfile.name) }}
                   style={styles.profileImage}
                 />
               </View>
 
-              <Text style={styles.profileName}>{selectedUser.name}</Text>
-              <Text style={styles.profileStatus}>
-                {selectedUser.isOnline ? 'Çevrimiçi' : 'Çevrimdışı'}
-              </Text>
+              <Text style={styles.profileName}>{selectedProfile.name}</Text>
+              <Text style={styles.profileStatus}>Çevrimiçi</Text>
 
               <View style={styles.infoSection}>
                 <View style={styles.infoRow}>
                   <Ionicons name="mail-outline" size={20} color="#93c5fd" />
-                  <Text style={styles.infoText}>{selectedUser.email}</Text>
+                  <Text style={styles.infoText}>{selectedProfile.email}</Text>
                 </View>
-                {selectedUser.location && (
+                {selectedProfile.location && (
                   <View style={styles.infoRow}>
                     <Ionicons name="location-outline" size={20} color="#93c5fd" />
-                    <Text style={styles.infoText}>{selectedUser.location}</Text>
+                    <Text style={styles.infoText}>{selectedProfile.location}</Text>
                   </View>
                 )}
               </View>
 
-              <TouchableOpacity 
-                style={[
-                  styles.followButton,
-                  isFollowing && styles.followingButton
-                ]}
-                onPress={handleFollowToggle}
-              >
-                <Ionicons 
-                  name={isFollowing ? "checkmark-circle" : "person-add"} 
-                  size={24} 
-                  color="#ffffff" 
-                />
-                <Text style={styles.followButtonText}>
-                  {isFollowing ? "Takip Ediliyor" : "Takip Et"}
-                </Text>
-              </TouchableOpacity>
-
-              {selectedUser.bio && (
+              {selectedProfile.bio && (
                 <View style={styles.bioSection}>
                   <Text style={styles.bioTitle}>Hakkında</Text>
-                  <Text style={styles.bioText}>
-                    {selectedUser.bio}
-                  </Text>
+                  <Text style={styles.bioText}>{selectedProfile.bio}</Text>
                 </View>
               )}
             </ScrollView>
@@ -584,6 +622,7 @@ useEffect(() => {
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -602,6 +641,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
+  // List Header
   listHeader: {
     position: 'relative',
     flexDirection: 'row',
@@ -625,6 +665,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
 
+  // Conversation List
   userItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -639,24 +680,10 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 12,
   },
-  avatarContainer: {
-    position: 'relative',
-  },
   userAvatar: {
     width: 56,
     height: 56,
     borderRadius: 28,
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: theme.colors.accent,
-    borderWidth: 2,
-    borderColor: theme.colors.background,
   },
   userInfo: {
     flex: 1,
@@ -699,6 +726,7 @@ const styles = StyleSheet.create({
     marginLeft: 88,
   },
 
+  // Message Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -733,10 +761,16 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
     fontSize: 12,
   },
+  headerTyping: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
   headerButton: {
     padding: 4,
   },
 
+  // Messages
   messagesContainer: {
     flex: 1,
   },
@@ -808,6 +842,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
+  // Input
   inputContainer: {
     padding: 16,
     paddingBottom: Platform.OS === 'ios' ? 16 : 16,
@@ -846,6 +881,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 
+  // Profile Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -913,24 +949,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textPrimary,
   },
-  followButton: {
-    backgroundColor: theme.colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  followingButton: {
-    backgroundColor: theme.colors.accent,
-  },
-  followButtonText: {
-    color: theme.colors.textPrimary,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   bioSection: {
     backgroundColor: `${theme.colors.border}4d`,
     borderRadius: 12,
@@ -949,8 +967,3 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 });
-
-
-
-
-

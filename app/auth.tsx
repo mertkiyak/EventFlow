@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  scrollContent: {
+  scrollContent: { 
     flexGrow: 1,
     justifyContent: 'center',
     padding: 24,

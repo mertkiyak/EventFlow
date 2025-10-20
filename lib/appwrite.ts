@@ -1,37 +1,57 @@
 import { Account, Client, Databases, ID, Query, Storage } from "react-native-appwrite";
 
-
-
+// ========================================
+// APPWRITE CLIENT CONFIGURATION
+// ========================================
 export const client = new Client()
-.setEndpoint(process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!)
-.setProject(process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID!)
-.setPlatform(process.env.EXPO_PUBLIC_APPWRITE_PLATFORM!);
+  .setEndpoint(process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!)
+  .setProject(process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID!)
+  .setPlatform(process.env.EXPO_PUBLIC_APPWRITE_PLATFORM!);
 
-export const account = new Account(client)
-export const databases = new Databases(client)
+// ========================================
+// APPWRITE SERVICES
+// ========================================
+export const account = new Account(client);
+export const databases = new Databases(client);
 export const storage = new Storage(client);
 
-export const DATABASE_ID = process.env.EXPO_PUBLIC_DB_ID!  // Database ID
-export const COLLECTION_ID = process.env.EXPO_PUBLIC_DB_COLLECTION_ID!  // Collection ID;
-export const COMPLETIONS_COLLECTION_ID = process.env.EXPO_PUBLIC_DB_COMPLETIONS_COLLECTION_ID! 
+// ========================================
+// DATABASE & PROJECT IDS
+// ========================================
+export const DATABASE_ID = process.env.EXPO_PUBLIC_DB_ID!;
+export const PROJECT_ID = "687fa279001603a29450";
+
+// ========================================
+// COLLECTION IDS
+// ========================================
+// Event Collections
+export const COLLECTION_ID = process.env.EXPO_PUBLIC_DB_COLLECTION_ID!;
+export const COMPLETIONS_COLLECTION_ID = process.env.EXPO_PUBLIC_DB_COMPLETIONS_COLLECTION_ID!;
+
+// Messaging Collections
+export const MESSAGES_COLLECTION_ID = '68e85ad500181492effc';
+export const CONVERSATIONS_COLLECTION_ID = '68e85bb7002adccc2ca7';
+export const USERS_COLLECTION_ID = '68e85c200010d15a4770';
+
+// Notifications Collection
+export const NOTIFICATIONS_COLLECTION_ID = "68eaf59500234a92760c";
+
+// ========================================
+// STORAGE BUCKET IDS
+// ========================================
+export const BUCKET_ID = "68e3150d000f8d7abf62";
+export const MESSAGE_ATTACHMENTS_BUCKET = "message_attachments"; // Dosya ekleri için (opsiyonel)
+
+// ========================================
+// TYPESCRIPT INTERFACES
+// ========================================
 export interface RealTimeEventResponse {
   events: string[];
   payload: any;
 }
 
-export const BUCKET_ID = "68e3150d000f8d7abf62"; // Appwrite'tan alacaksınız
-
-
-// lib/appwrite.ts
-export const PROJECT_ID = "687fa279001603a29450"; // Appwrite console'dan alın
-
-
-export const NOTIFICATIONS_COLLECTION_ID = "68eaf59500234a92760c"; // Buraya kendi ID'nizi yazın
-export const MESSAGES_COLLECTION_ID = '68e85ad500181492effc'; // Mesajlar koleksiyonu ID'si
-export const CONVERSATIONS_COLLECTION_ID = '68e85bb7002adccc2ca7'; // Konuşmalar koleksiyonu ID'si
-export const USERS_COLLECTION_ID = '68e85c200010d15a4770'; // Kullanıcılar koleksiyonu ID'si
-
+// ========================================
+// EXPORTS
+// ========================================
+export type { Models } from 'react-native-appwrite';
 export { ID, Query };
-
-  export type { Models } from 'react-native-appwrite';
-

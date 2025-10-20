@@ -12,15 +12,35 @@ export interface Events  extends Models.Document {
 image_url: string;
 }
 
-export interface EventCompletion extends Models.Document {  
-  event_id: string;
-  user_id: string;
-  completed_at: string;
+export interface Message {
+  $id: string;
+  senderId: string;
+  receiverId: string;
+  text: string;
+  conversationId: string;
+  $createdAt: string;
+  isRead: boolean;
+  status?: 'sent' | 'delivered' | 'read';
+  replyToMessageId?: string;
+  attachments?: string[];
 }
+
+export interface Conversation {
+  $id: string;
+  type?: 'dm' | 'group';
+  participants: string[];
+  lastMessage?: string;
+  lastMessageTime?: string;
+  lastMessageSenderId?: string;
+  $createdAt: string;
+  $updatedAt: string;
+}
+
 
 
 export interface UserProfile {
   $id: string;
+  userId: string;
   name: string;
   age: number;
   location: string;
@@ -31,4 +51,6 @@ export interface UserProfile {
   following: number;
   $createdAt: string;
   $updatedAt: string;
+  email: string;
+  
 }

@@ -9,14 +9,23 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.eventflow"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.yourcompany.eventflow",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "NOTIFICATIONS",
+        "VIBRATE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -31,6 +40,15 @@
           "cameraPermission": "Etkinlik fotoğrafı çekmek için kameranıza erişmemiz gerekiyor."
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#386ae0",
+          "sounds": [],
+          "mode": "production"
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",
@@ -42,6 +60,12 @@
         }
       ]
     ],
+    "notification": {
+      "icon": "./assets/images/notification-icon.png",
+      "color": "#386ae0",
+      "androidMode": "default",
+      "androidCollapsedTitle": "{{unread_count}} yeni mesajınız var"
+    },
     "experiments": {
       "typedRoutes": true
     }
