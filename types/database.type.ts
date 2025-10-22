@@ -40,7 +40,7 @@ export interface Conversation {
 
 export interface UserProfile {
   $id: string;
-  userId: string;
+  username: string;
   name: string;
   age: number;
   location: string;

@@ -59,55 +59,71 @@ export default function MessageScreen() {
 
   // URL parametrelerinden gelen kullanıcıyı otomatik seç
   useEffect(() => {
-    if (params.selectedUserId && user) {
+    if (params.selectedusername && user) {
       loadConversationFromParams();
     }
-  }, [params.selectedUserId, user]);
+  }, [params.selectedusername, user]);
 
   // Kullanıcı seçildiğinde mesajları yükle ve realtime dinle
-  useEffect(() => {
-    if (!user || !selectedProfile) return;
+useEffect(() => {
+  if (!user || !selectedProfile) return;
 
-    loadMessages();
-    
-    const conversationId = messageService.createConversationId(user.$id, selectedProfile.userId);
-    
-    const unsubscribe = messageService.subscribeToMessages(
-      conversationId,
-      (newMessage) => {
-        setMessages((prev) => {
-          if (prev.some(msg => msg.$id === newMessage.$id)) {
+  loadMessages();
+  
+  const conversationId = messageService.createConversationId(user.$id, selectedProfile.username);
+  
+  const unsubscribe = messageService.subscribeToMessages(
+    conversationId,
+    (newMessage) => {
+      console.log('Realtime message received:', newMessage.$id);
+      
+      setMessages((prev) => {
+        // Mesaj zaten varsa ekleme (duplicate prevention)
+        if (prev.some(msg => msg.$id === newMessage.$id)) {
+          console.log('Message already exists, skipping:', newMessage.$id);
+          return prev;
+        }
+        
+        // Kendi gönderdiğimiz mesajı realtime'dan tekrar ekleme
+        // (Optimistic UI zaten ekliyor)
+        if (newMessage.senderId === user.$id) {
+          // Temp ID'li mesaj varsa değiştir, yoksa ekleme (zaten optimistic UI'dan var)
+          const hasTempMessage = prev.some(msg => msg.$id.startsWith('temp-'));
+          if (!hasTempMessage) {
+            console.log('Own message from realtime (no temp), skipping:', newMessage.$id);
             return prev;
           }
-          return [...prev, newMessage];
-        });
-        
-        scrollToBottom();
-        
-        // Karşı taraftan gelen mesajları okundu işaretle
-        if (newMessage.senderId !== user.$id) {
-          messageService.markMessagesAsRead(user.$id, selectedProfile.userId);
         }
+        
+        console.log('Adding message to state:', newMessage.$id);
+        return [...prev, newMessage];
+      });
+      
+      scrollToBottom();
+      
+      // Karşı taraftan gelen mesajları okundu işaretle
+      if (newMessage.senderId !== user.$id) {
+        messageService.markMessagesAsRead(user.$id, selectedProfile.username);
       }
-    );
+    }
+  );
 
-    return () => {
-      unsubscribe();
-    };
-  }, [user, selectedProfile]);
-
+  return () => {
+    unsubscribe();
+  };
+}, [user, selectedProfile]);
   const loadConversationFromParams = async () => {
     if (!user) return;
 
     try {
-      const userId = params.selectedUserId as string;
-      let profile = await messageService.getProfile(userId);
+      const username = params.selectedusername as string;
+      let profile = await messageService.getProfile(username);
 
       if (!profile) {
         // Profil yoksa varsayılan oluştur
         profile = {
-          $id: userId,
-          userId: userId,
+          $id: username,
+          username: username,
           name: (params.selectedUserName as string) || 'Kullanıcı',
           email: (params.selectedUserEmail as string) || '',
           avatar_url: params.selectedUserAvatar as string,
@@ -125,8 +141,8 @@ export default function MessageScreen() {
       setSelectedProfile(profile);
 
       // Conversation oluştur veya getir
-      const conversation = await messageService.getOrCreateConversation(user.$id, userId);
-      const unreadCount = await messageService.getConversationUnreadCount(user.$id, userId);
+      const conversation = await messageService.getOrCreateConversation(user.$id, username);
+      const unreadCount = await messageService.getConversationUnreadCount(user.$id, username);
 
       setSelectedConversation({
         ...conversation,
@@ -149,12 +165,12 @@ export default function MessageScreen() {
       
       const conversationsWithProfiles = await Promise.all(
         userConversations.map(async (conv) => {
-          const otherUserId = conv.participants.find(id => id !== user.$id);
+          const otherusername = conv.participants.find(id => id !== user.$id);
           
-          if (!otherUserId) return null;
+          if (!otherusername) return null;
 
-          const profile = await messageService.getProfile(otherUserId);
-          const unreadCount = await messageService.getConversationUnreadCount(user.$id, otherUserId);
+          const profile = await messageService.getProfile(otherusername);
+          const unreadCount = await messageService.getConversationUnreadCount(user.$id, otherusername);
 
           return {
             ...conv,
@@ -188,14 +204,14 @@ export default function MessageScreen() {
       setLoading(true);
       const fetchedMessages = await messageService.getMessages(
         user.$id, 
-        selectedProfile.userId,
+        selectedProfile.username,
         50,
         0
       );
       
       setMessages(fetchedMessages);
       
-      await messageService.markMessagesAsRead(user.$id, selectedProfile.userId);
+      await messageService.markMessagesAsRead(user.$id, selectedProfile.username);
       
       scrollToBottom();
     } catch (error) {
@@ -206,73 +222,140 @@ export default function MessageScreen() {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || !user || !selectedProfile || sending) return;
+// handleSendMessage fonksiyonunu değiştir - message.tsx içinde
 
-    const textToSend = messageText.trim();
-    setMessageText('');
+const handleSendMessage = async () => {
+  if (!messageText.trim() || !user || !selectedProfile || sending) return;
 
-    // Optimistic UI: Mesajı hemen göster
-    const optimisticMessage: Message = {
-      $id: `temp-${Date.now()}`,
-      senderId: user.$id,
-      receiverId: selectedProfile.userId,
-      text: textToSend,
-      conversationId: messageService.createConversationId(user.$id, selectedProfile.userId),
-      $createdAt: new Date().toISOString(),
-      isRead: false,
-      status: 'sent',
-    };
+  const textToSend = messageText.trim();
+  const tempId = `temp-${Date.now()}`;
+  
+  setMessageText('');
+  setSending(true);
 
-    setMessages(prev => [...prev, optimisticMessage]);
-    scrollToBottom();
-
-    try {
-      setSending(true);
-      
-      const sentMessage = await messageService.sendMessage(
-        user.$id,
-        selectedProfile.userId,
-        textToSend
-      );
-
-      // Optimistic mesajı gerçek mesajla değiştir
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.$id === optimisticMessage.$id ? sentMessage : msg
-        )
-      );
-
-      // Bildirim gönder
-      try {
-        await createMessageNotification(
-          selectedProfile.userId,
-          user.name || 'Bir kullanıcı',
-          sentMessage.$id,
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=random`
-        );
-      } catch (notifError) {
-        console.warn('Notification error:', notifError);
-      }
-
-      loadConversations();
-    } catch (error: any) {
-      console.error('Error sending message:', error);
-      
-      // Optimistic mesajı kaldır
-      setMessages(prev => prev.filter(msg => msg.$id !== optimisticMessage.$id));
-      
-      Alert.alert(
-        'Hata',
-        error.message || 'Mesaj gönderilemedi',
-        [{ text: 'Tamam' }]
-      );
-      
-      setMessageText(textToSend);
-    } finally {
-      setSending(false);
-    }
+  // Optimistic UI: Mesajı hemen göster
+  const optimisticMessage: Message = {
+    $id: tempId,
+    senderId: user.$id,
+    receiverId: selectedProfile.username,
+    text: textToSend,
+    conversationId: messageService.createConversationId(user.$id, selectedProfile.username),
+    $createdAt: new Date().toISOString(),
+    isRead: false,
+    status: 'sent',
   };
+
+  setMessages(prev => [...prev, optimisticMessage]);
+  scrollToBottom();
+
+  try {
+    // Mesajı gönder
+    const sentMessage = await messageService.sendMessage(
+      user.$id,
+      selectedProfile.username,
+      textToSend
+    );
+
+    console.log('Message sent successfully:', sentMessage.$id);
+
+    // Optimistic mesajı gerçek mesajla değiştir
+    // ÖNEMLI: Realtime'dan gelen mesajı engellemek için state'i hemen güncelle
+    setMessages(prev => {
+      // Önce optimistic mesajı kaldır
+      const withoutOptimistic = prev.filter(msg => msg.$id !== tempId);
+      
+      // Gerçek mesaj zaten realtime'dan geldiyse ekleme
+      if (withoutOptimistic.some(msg => msg.$id === sentMessage.$id)) {
+        return withoutOptimistic;
+      }
+      
+      // Gerçek mesajı ekle
+      return [...withoutOptimistic, sentMessage];
+    });
+
+    // Bildirim gönder
+    try {
+      await createMessageNotification(
+        selectedProfile.username,
+        user.name || 'Bir kullanıcı',
+        sentMessage.$id,
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=random`
+      );
+    } catch (notifError) {
+      console.warn('Notification error:', notifError);
+    }
+
+    // Konuşmaları güncelle
+    loadConversations();
+    
+  } catch (error: any) {
+    console.error('Error sending message:', error);
+    
+    // Optimistic mesajı kaldır
+    setMessages(prev => prev.filter(msg => msg.$id !== tempId));
+    
+    // Kullanıcıya hata mesajı göster
+    Alert.alert(
+      'Mesaj Gönderilemedi',
+      error.message || 'Bir hata oluştu. Lütfen tekrar deneyin.',
+      [{ text: 'Tamam' }]
+    );
+    
+    // Mesajı geri yükle
+    setMessageText(textToSend);
+  } finally {
+    setSending(false);
+  }
+};
+
+// Realtime subscription'ı da güncelle - useEffect içinde
+useEffect(() => {
+  if (!user || !selectedProfile) return;
+
+  loadMessages();
+  
+  const conversationId = messageService.createConversationId(user.$id, selectedProfile.username);
+  
+  const unsubscribe = messageService.subscribeToMessages(
+    conversationId,
+    (newMessage) => {
+      console.log('Realtime message received:', newMessage.$id);
+      
+      setMessages((prev) => {
+        // Mesaj zaten varsa ekleme (duplicate prevention)
+        if (prev.some(msg => msg.$id === newMessage.$id)) {
+          console.log('Message already exists, skipping:', newMessage.$id);
+          return prev;
+        }
+        
+        // Kendi gönderdiğimiz mesajı realtime'dan tekrar ekleme
+        // (Optimistic UI zaten ekliyor)
+        if (newMessage.senderId === user.$id) {
+          // Temp ID'li mesaj varsa değiştir, yoksa ekleme (zaten optimistic UI'dan var)
+          const hasTempMessage = prev.some(msg => msg.$id.startsWith('temp-'));
+          if (!hasTempMessage) {
+            console.log('Own message from realtime (no temp), skipping:', newMessage.$id);
+            return prev;
+          }
+        }
+        
+        console.log('Adding message to state:', newMessage.$id);
+        return [...prev, newMessage];
+      });
+      
+      scrollToBottom();
+      
+      // Karşı taraftan gelen mesajları okundu işaretle
+      if (newMessage.senderId !== user.$id) {
+        messageService.markMessagesAsRead(user.$id, selectedProfile.username);
+      }
+    }
+  );
+
+  return () => {
+    unsubscribe();
+  };
+}, [user, selectedProfile]);
 
   const handleTyping = (text: string) => {
     setMessageText(text);

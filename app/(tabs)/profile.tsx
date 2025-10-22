@@ -44,7 +44,8 @@ export default function ProfileScreen() {
   });
 
   const [profile, setProfile] = useState<ProfileData>({
-    name: "Kullanıcı",
+    name: "",
+    username: "",
     age: 24,
     location: "İstanbul",
     bio: "Seyahat etmeyi, yeni yerler keşfetmeyi ve farklı kültürlere dalmayı seven biriyim.",
@@ -76,6 +77,7 @@ export default function ProfileScreen() {
 
     setProfile({
       name: response.name || user.name || "Kullanıcı",
+      username: response.username ||  "",
       age: response.age || 24,
       location: response.location || "İstanbul",
       bio: response.bio || "",
@@ -104,6 +106,7 @@ const createUserProfile = async () => {
     
     const defaultProfile = {
       name: user.name || "Kullanıcı",
+      username: `user${user.$id.slice(-8)}`,
       age: 24,
       location: "İstanbul",
       bio: "Henüz bir bio eklenmedi.",
@@ -124,6 +127,7 @@ const createUserProfile = async () => {
     
     setProfile({
       name: defaultProfile.name,
+      username: defaultProfile.username,
       age: defaultProfile.age,
       location: defaultProfile.location,
       bio: defaultProfile.bio,
@@ -139,25 +143,58 @@ const createUserProfile = async () => {
   }
 };
 
-  const handleSaveProfile = async (updatedProfile: ProfileData) => {
+ const handleSaveProfile = async (updatedProfile: ProfileData) => {
   if (!user) return;
+
+  // Username validation
+  if (!updatedProfile.username || updatedProfile.username.trim().length < 3) {
+    Alert.alert("Hata", "Kullanıcı adı en az 3 karakter olmalıdır");
+    return;
+  }
+
+  // Username format kontrolü
+  const usernameRegex = /^[a-zA-Z0-9_]+$/;
+  if (!usernameRegex.test(updatedProfile.username)) {
+    Alert.alert("Hata", "Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir");
+    return;
+  }
 
   try {
     // Önce profil var mı kontrol et
     try {
-      await databases.getDocument(
+      const existingProfile = await databases.getDocument(
         DATABASE_ID,
         USERS_COLLECTION_ID,
         user.$id
       );
       
-      // Profil varsa güncelle
+      // Username değişti mi kontrol et
+      if (existingProfile.username !== updatedProfile.username) {
+        // Yeni username kullanımda mı kontrol et
+        try {
+          const usernameCheck = await databases.listDocuments(
+            DATABASE_ID,
+            USERS_COLLECTION_ID,
+            [Query.equal("username", updatedProfile.username)]
+          );
+          
+          if (usernameCheck.total > 0) {
+            Alert.alert("Hata", "Bu kullanıcı adı zaten kullanılıyor");
+            return;
+          }
+        } catch (error) {
+          console.error("Username check error:", error);
+        }
+      }
+      
+      // Profil güncelle
       await databases.updateDocument(
         DATABASE_ID,
         USERS_COLLECTION_ID,
         user.$id,
         {
           name: updatedProfile.name,
+          username: updatedProfile.username.toLowerCase(), // ← EKLE
           age: updatedProfile.age,
           location: updatedProfile.location,
           bio: updatedProfile.bio,
@@ -168,12 +205,29 @@ const createUserProfile = async () => {
     } catch (error: any) {
       // Profil yoksa oluştur
       if (error.code === 404) {
+        // Yeni kullanıcı için username kontrolü
+        try {
+          const usernameCheck = await databases.listDocuments(
+            DATABASE_ID,
+            USERS_COLLECTION_ID,
+            [Query.equal("username", updatedProfile.username)]
+          );
+          
+          if (usernameCheck.total > 0) {
+            Alert.alert("Hata", "Bu kullanıcı adı zaten kullanılıyor");
+            return;
+          }
+        } catch (error) {
+          console.error("Username check error:", error);
+        }
+
         await databases.createDocument(
           DATABASE_ID,
           USERS_COLLECTION_ID,
           user.$id,
           {
             name: updatedProfile.name,
+            username: updatedProfile.username.toLowerCase(), // ← EKLE
             age: updatedProfile.age,
             location: updatedProfile.location,
             bio: updatedProfile.bio,
@@ -196,7 +250,6 @@ const createUserProfile = async () => {
     Alert.alert("Hata", "Profil güncellenirken bir hata oluştu");
   }
 };
-
   const fetchMyEvents = async () => {
     if (!user) return;
     try {
@@ -307,19 +360,15 @@ const createUserProfile = async () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
-          </View>
-          <View style={styles.infoContainer}>
-            <Text style={styles.name}>{profile.name}, {profile.age}</Text>
-            <View style={styles.locationRow}>
-              <MaterialCommunityIcons name="map-marker" size={16} color="#9eb7a8" />
-              <Text style={styles.location}>{profile.location}</Text>
-            </View>
-          </View>
-        </View>
 
+<View style={styles.infoContainer}>
+  <Text style={styles.name}>{profile.name}, {profile.age}</Text>
+  <Text style={styles.username}>@{profile.username}</Text> {/* ← EKLE */}
+  <View style={styles.locationRow}>
+    <MaterialCommunityIcons name="map-marker" size={16} color="#9eb7a8" />
+    <Text style={styles.location}>{profile.location}</Text>
+  </View>
+</View>
         {/* Takipçi/Takip Sayıları */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
@@ -610,5 +659,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderColor: theme.colors.border,
     borderRadius: 12,
-  },
+  },username: {
+  color: theme.colors.textSecondary,
+  fontSize: 16,
+  marginBottom: 8, // ← EKLE
+},
 });

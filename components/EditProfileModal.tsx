@@ -15,6 +15,7 @@ import {
 
 export interface ProfileData {
   name: string;
+  username: string;
   age: number;
   location: string;
   bio: string;
@@ -107,7 +108,20 @@ export default function EditProfileModal({
                 placeholder="İsminizi girin"
                 placeholderTextColor="#6B7280"
               />
+              <TextInput
+  style={styles.input}
+  placeholder="Kullanıcı Adınızı Girin"
+  placeholderTextColor={theme.colors.textSecondary}
+  value={formData.username}
+  onChangeText={(text) => setFormData({ ...formData, username: text.toLowerCase() })}
+  autoCapitalize="none"
+  maxLength={30}
+/>
+<Text style={styles.inputHint}>
+  Sadece harf, rakam ve alt çizgi kullanabilirsiniz
+</Text>
             </View>
+            
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Yaş</Text>
@@ -293,4 +307,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 14,
   },
+  inputHint: {
+  fontSize: 12,
+  color: theme.colors.textSecondary,
+  marginTop: -8,
+  marginBottom: 12,
+  paddingHorizontal: 4,
+},
 });

@@ -13,17 +13,14 @@ import {
   USERS_COLLECTION_ID,
 } from './appwrite';
 
-// Türleri export et
 export type { Conversation, Message, UserProfile };
 
 class MessageService {
-  // Deterministik conversation ID oluştur
   createConversationId(userId1: string, userId2: string): string {
     const sortedIds = [userId1, userId2].sort().join('_');
     return MD5(sortedIds).toString();
   }
 
-  // Conversation oluştur veya getir
   async getOrCreateConversation(
     userId1: string,
     userId2: string,
@@ -49,7 +46,6 @@ class MessageService {
         };
 
         try {
-          // Permissions parametresini kaldırdık - collection default permissions'ı kullanacak
           const newConversation = await databases.createDocument(
             DATABASE_ID,
             CONVERSATIONS_COLLECTION_ID,
@@ -67,7 +63,6 @@ class MessageService {
     }
   }
 
-  // Mesaj gönder
   async sendMessage(
     senderId: string,
     receiverId: string,
@@ -75,12 +70,30 @@ class MessageService {
     attachments?: string[],
     replyToMessageId?: string
   ): Promise<Message> {
-    if (!senderId || !receiverId || senderId === receiverId) {
-      throw new Error('Geçersiz kullanıcı ID\'leri');
+    // Validation - daha detaylı kontrol
+    if (!senderId || !receiverId) {
+      throw new Error('Gönderici veya alıcı ID\'si eksik');
     }
 
+    if (senderId === receiverId) {
+      throw new Error('Kendinize mesaj gönderemezsiniz');
+    }
+
+    if (!text || !text.trim()) {
+      throw new Error('Mesaj boş olamaz');
+    }
+
+    console.log('Sending message from:', senderId, 'to:', receiverId);
+
     const conversationId = this.createConversationId(senderId, receiverId);
-    await this.getOrCreateConversation(senderId, receiverId);
+    
+    // Conversation'ı önce oluştur
+    try {
+      await this.getOrCreateConversation(senderId, receiverId);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      throw new Error('Konuşma oluşturulamadı');
+    }
 
     const messageData: any = {
       senderId,
@@ -99,7 +112,6 @@ class MessageService {
     }
 
     try {
-      // Permissions parametresini kaldırdık - collection default permissions'ı kullanacak
       const message = await databases.createDocument(
         DATABASE_ID,
         MESSAGES_COLLECTION_ID,
@@ -107,18 +119,20 @@ class MessageService {
         messageData
       );
 
-      // Conversation güncelle
-      await this.updateConversation(conversationId, text, senderId);
+      console.log('Message sent successfully:', message.$id);
 
-      console.log('Message sent successfully');
+      // Conversation güncelle (async, hata vermesi mesaj gönderimini etkilemez)
+      this.updateConversation(conversationId, text, senderId).catch(err => 
+        console.warn('Could not update conversation:', err)
+      );
+
       return message as any;
     } catch (error: any) {
       console.error('Send message error:', error);
-      throw new Error(`Mesaj gönderilemedi: ${error.message}`);
+      throw new Error(`Mesaj gönderilemedi: ${error.message || 'Bilinmeyen hata'}`);
     }
   }
 
-  // Conversation son mesaj bilgisini güncelle
   private async updateConversation(
     conversationId: string,
     lastMessage: string,
@@ -142,7 +156,6 @@ class MessageService {
     }
   }
 
-  // Mesajları getir (pagination ile)
   async getMessages(
     userId1: string,
     userId2: string,
@@ -170,7 +183,6 @@ class MessageService {
     }
   }
 
-  // Kullanıcının tüm conversation'larını getir
   async getUserConversations(userId: string): Promise<Conversation[]> {
     try {
       const response = await databases.listDocuments(
@@ -190,7 +202,6 @@ class MessageService {
     }
   }
 
-  // Mesajları okundu işaretle
   async markMessagesAsRead(userId: string, otherUserId: string): Promise<void> {
     const conversationId = this.createConversationId(userId, otherUserId);
 
@@ -223,7 +234,6 @@ class MessageService {
     }
   }
 
-  // Okunmamış mesaj sayısı
   async getUnreadCount(userId: string): Promise<number> {
     try {
       const response = await databases.listDocuments(
@@ -242,7 +252,6 @@ class MessageService {
     }
   }
 
-  // Conversation'a özel okunmamış mesaj sayısı
   async getConversationUnreadCount(
     userId: string,
     otherUserId: string
@@ -267,7 +276,6 @@ class MessageService {
     }
   }
 
-  // Realtime mesaj dinleme
   subscribeToMessages(
     conversationId: string,
     callback: (message: Message) => void
@@ -287,7 +295,6 @@ class MessageService {
     });
   }
 
-  // Kullanıcı profilini getir
   async getProfile(userId: string): Promise<UserProfile | null> {
     try {
       const user = await databases.getDocument(
@@ -296,13 +303,16 @@ class MessageService {
         userId
       );
       return user as any;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Get user profile error:', error);
+      // Profil bulunamazsa null dön, hata fırlatma
+      if (error.code === 404) {
+        return null;
+      }
       return null;
     }
   }
 
-  // Mesaj sil
   async deleteMessage(messageId: string): Promise<void> {
     try {
       await databases.deleteDocument(
@@ -316,7 +326,6 @@ class MessageService {
     }
   }
 
-  // Conversation sil
   async deleteConversation(userId1: string, userId2: string): Promise<void> {
     const conversationId = this.createConversationId(userId1, userId2);
 

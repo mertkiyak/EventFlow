@@ -1,7 +1,9 @@
+// lib/notifications.ts
 import { DATABASE_ID, databases } from "@/lib/appwrite";
 import { ID } from "react-native-appwrite";
 
-const NOTIFICATIONS_COLLECTION_ID = "68eaf59500234a92760c"; 
+// Doğru collection ID'yi kullan
+export const NOTIFICATIONS_COLLECTION_ID = "68eaf59500234a92760c"; 
 
 interface CreateNotificationParams {
   user_id: string;
@@ -14,6 +16,8 @@ interface CreateNotificationParams {
 
 export const createNotification = async (params: CreateNotificationParams) => {
   try {
+    console.log('Creating notification:', params);
+    
     const notification = await databases.createDocument(
       DATABASE_ID,
       NOTIFICATIONS_COLLECTION_ID,
@@ -21,9 +25,11 @@ export const createNotification = async (params: CreateNotificationParams) => {
       {
         ...params,
         is_read: false,
-        created_at: new Date().toISOString(),
+        // created_at yerine Appwrite'ın otomatik $createdAt kullanılıyor
       }
     );
+    
+    console.log('Notification created successfully:', notification.$id);
     return notification;
   } catch (error) {
     console.error("Error creating notification:", error);
@@ -36,13 +42,13 @@ export const createEventNotification = async (
   userId: string,
   eventTitle: string,
   eventId: string,
-  avatarUrl: string
+  avatarUrl: string = 'https://ui-avatars.com/api/?name=Event&background=random'
 ) => {
   return createNotification({
     user_id: userId,
     type: 'event',
-    title: eventTitle,
-    message: 'Etkinlik başladı!',
+    title: 'Etkinlik Hatırlatması',
+    message: `${eventTitle} etkinliği başlıyor!`,
     related_id: eventId,
     avatar_url: avatarUrl,
   });
@@ -54,13 +60,17 @@ export const createBulkNotifications = async (
   params: Omit<CreateNotificationParams, 'user_id'>
 ) => {
   try {
+    console.log('Creating bulk notifications for', userIds.length, 'users');
+    
     const promises = userIds.map(userId =>
       createNotification({
         ...params,
         user_id: userId,
       })
     );
+    
     await Promise.all(promises);
+    console.log('Bulk notifications created successfully');
   } catch (error) {
     console.error("Error creating bulk notifications:", error);
     throw error;
@@ -72,13 +82,13 @@ export const createMatchNotification = async (
   userId: string,
   matchedUserName: string,
   matchedUserId: string,
-  avatarUrl: string
+  avatarUrl: string = 'https://ui-avatars.com/api/?name=Match&background=random'
 ) => {
   return createNotification({
     user_id: userId,
     type: 'match',
-    title: matchedUserName,
-    message: 'Yeni bir eşleşmen var!',
+    title: 'Yeni Eşleşme! 🎉',
+    message: `${matchedUserName} ile eşleştiniz!`,
     related_id: matchedUserId,
     avatar_url: avatarUrl,
   });
@@ -88,15 +98,15 @@ export const createMatchNotification = async (
 export const createMessageNotification = async (
   userId: string,
   senderName: string,
-  messageId: string,
-  avatarUrl: string
+  conversationId: string,
+  avatarUrl: string = 'https://ui-avatars.com/api/?name=User&background=random'
 ) => {
   return createNotification({
     user_id: userId,
     type: 'message',
     title: senderName,
-    message: 'Yeni mesajın var!',
-    related_id: messageId, // Mesaj ID'si
+    message: 'Yeni mesajın var! 💬',
+    related_id: conversationId,
     avatar_url: avatarUrl,
   });
-}
+};
