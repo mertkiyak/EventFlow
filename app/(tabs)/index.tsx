@@ -8,6 +8,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { theme } from "@/lib/theme";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { FlatList, Image, SafeAreaView, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Query } from "react-native-appwrite";
@@ -32,6 +33,7 @@ const NOTIFICATIONS_COLLECTION_ID = "YOUR_NOTIFICATIONS_COLLECTION_ID";
 
 export default function Index() {
   const { signOut, user } = useAuth();
+  const router = useRouter();
   const [myEvents, setMyEvents] = useState<Events[]>([]);
   const [recommendedEvents, setRecommendedEvents] = useState<Events[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<Events[]>([]);
@@ -171,20 +173,13 @@ export default function Index() {
     // Bildirim tipine göre işlem yap
     switch (notification.type) {
       case 'event':
-        // Etkinlik detayını aç
+        // Etkinlik detayına git
         if (notification.related_id) {
-          try {
-            const event = await databases.getDocument(
-              DATABASE_ID,
-              COLLECTION_ID,
-              notification.related_id
-            );
-            setSelectedEvent(event as Events);
-            setIsNotificationsVisible(false);
-            setIsModalVisible(true);
-          } catch (error) {
-            console.error("Error fetching event:", error);
-          }
+          setIsNotificationsVisible(false);
+          router.push({
+            pathname: '/event-detail',
+            params: { eventId: notification.related_id }
+          });
         }
         break;
       case 'message':
@@ -253,14 +248,20 @@ export default function Index() {
     }
   };
 
+  // ✅ Event detail sayfasına yönlendir
   const handleJoinEvent = (eventId: string) => {
-    console.log("Joining event:", eventId);
-    handleCloseModal();
+    router.push({
+      pathname: '/event-detail',
+      params: { eventId }
+    });
   };
   
+  // ✅ Kart tıklandığında detay sayfasına git
   const handleCardPress = (event: Events, isMyEvent: boolean = false) => {
-    setSelectedEvent(event);
-    setIsModalVisible(true);
+    router.push({
+      pathname: '/event-detail',
+      params: { eventId: event.$id }
+    });
   };
 
   const handleCloseModal = () => {
@@ -315,12 +316,15 @@ export default function Index() {
         {showJoinButton && (
           <Button
             mode="contained"
-            onPress={() => handleJoinEvent(event.$id)}
+            onPress={(e) => {
+              e?.stopPropagation?.(); // Kartın onPress'ini engellemek için
+              handleJoinEvent(event.$id);
+            }}
             style={styles.joinButton}
             buttonColor={theme.colors.primary}
             textColor={theme.colors.textPrimary}
           >
-            Katıl
+            Detayları Gör
           </Button>
         )}
       </View>
@@ -427,63 +431,8 @@ export default function Index() {
         </View>
       </ScrollView>
 
-      {/* Etkinlik Detay Modal */}
+      {/* Bildirimler Modal */}
       <Portal>
-        <Modal
-          visible={isModalVisible}
-          onDismiss={handleCloseModal}
-          contentContainerStyle={styles.modalContainer}
-        >
-          {selectedEvent && (
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Image 
-                source={{ uri: selectedEvent.image_url || 'https://via.placeholder.com/400x200?text=Etkinlik+Görseli' }} 
-                style={styles.modalImage} 
-              />
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>{selectedEvent.title}</Text>
-                
-                <View style={styles.infoRow}>
-                  <MaterialCommunityIcons name="calendar" size={18} color={theme.colors.textSecondary} />
-                  <Text style={styles.modalInfoText}>{formatDate(selectedEvent.event_date)}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <MaterialCommunityIcons name="clock-outline" size={18} color={theme.colors.textSecondary} />
-                  <Text style={styles.modalInfoText}>{formatTime(selectedEvent.event_date)}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <MaterialCommunityIcons name="map-marker" size={18} color={theme.colors.textSecondary} />
-                  <Text style={styles.modalInfoText}>{selectedEvent.location}</Text>
-                </View>
-
-                <Text style={styles.modalDescriptionTitle}>Açıklama</Text>
-                <Text style={styles.modalDescription}>{selectedEvent.description || "Açıklama bulunmuyor."}</Text>
-                
-                {selectedEvent.user_id !== user?.$id && (
-                  <Button
-                    mode="contained"
-                    onPress={() => handleJoinEvent(selectedEvent.$id)}
-                    style={styles.joinButton}
-                    buttonColor={theme.colors.primary}
-                  >
-                    Etkinliğe Katıl
-                  </Button>
-                )}
-                
-                <Button
-                  mode="text"
-                  onPress={handleCloseModal}
-                  style={styles.modalCloseButton}
-                  textColor={theme.colors.textSecondary}
-                >
-                  Kapat
-                </Button>
-              </View>
-            </ScrollView>
-          )}
-        </Modal>
-
-        {/* Bildirimler Modal */}
         <Modal
           visible={isNotificationsVisible}
           onDismiss={() => setIsNotificationsVisible(false)}
@@ -635,55 +584,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    marginTop: 8,
-  },
-  
-  // Etkinlik Modal Stilleri
-  modalContainer: {
-    backgroundColor: theme.colors.surface,
-    marginHorizontal: 20,
-    marginVertical: 40,
-    borderRadius: 16,
-    maxHeight: '85%',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  modalImage: {
-    width: '100%',
-    height: 200,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    backgroundColor: theme.colors.border,
-  },
-  modalContent: {
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: theme.colors.textPrimary,
-    marginBottom: 16,
-  },
-  modalInfoText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    marginLeft: 10,
-  },
-  modalDescriptionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: theme.colors.textPrimary,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  modalDescription: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  modalCloseButton: {
     marginTop: 8,
   },
 

@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.eventflow"
+      "bundleIdentifier": "com.yourcompany.eventflow",
+      "statusBarStyle": "light"
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +26,12 @@
         "WRITE_EXTERNAL_STORAGE",
         "NOTIFICATIONS",
         "VIBRATE"
-      ]
+      ],
+      "statusBar": {
+        "barStyle": "light-content",
+        "backgroundColor": "#00000000",
+        "translucent": true
+      }
     },
     "web": {
       "bundler": "metro",

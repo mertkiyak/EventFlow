@@ -240,44 +240,82 @@ export default function AddEventScreen() {
     );
   };
 
-  const handleSubmit = async () => {
-    if (!user) return;
-    
-    setUploading(true);
-    setError("");
+const handleSubmit = async () => {
+  if (!user) return;
+  
+  // ✅ Validasyon ekleyelim
+  if (!title.trim()) {
+    setError("Etkinlik adı gereklidir.");
+    return;
+  }
+  
+  if (!location.trim()) {
+    setError("Konum seçmelisiniz.");
+    return;
+  }
 
-    try {
-      const eventDateTime = new Date(date);
-      eventDateTime.setHours(time.getHours());
-      eventDateTime.setMinutes(time.getMinutes());
+  if (!selectedLocation) {
+    setError("Lütfen geçerli bir konum seçin.");
+    return;
+  }
+  
+  setUploading(true);
+  setError("");
 
-      let imageUrl = null;
-      if (imageUri) {
-        imageUrl = await uploadImage();
-      }
+  try {
+    // Tarih ve saati birleştir
+    const eventDateTime = new Date(date);
+    eventDateTime.setHours(time.getHours());
+    eventDateTime.setMinutes(time.getMinutes());
 
-      await databases.createDocument(DATABASE_ID, COLLECTION_ID, ID.unique(), {
-        title,
-        description,
-        location,
+    // Resim yükle (varsa)
+    let imageUrl = null;
+    if (imageUri) {
+      imageUrl = await uploadImage();
+    }
+
+    // Veritabanına kaydet
+    await databases.createDocument(
+      DATABASE_ID, 
+      COLLECTION_ID, 
+      ID.unique(), 
+      {
+        title: title.trim(),
+        description: description.trim(),
+        location: location.trim(),
         event_date: eventDateTime.toISOString(),
         image_url: imageUrl,
         created_at: new Date().toISOString(),
         user_id: user.$id,
-      });
-
-      router.back();
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-        return;
+        
+        // 🎯 Konum koordinatları - String olarak kaydet
+        latitude: selectedLocation.latitude.toString(),
+        longitude: selectedLocation.longitude.toString(),
       }
-      setError("Etkinlik oluşturulurken bir hata oluştu.");
-    } finally {
-      setUploading(false);
-    }
-  };
+    );
 
+    Alert.alert(
+      "Başarılı!", 
+      "Etkinlik başarıyla oluşturuldu.",
+      [
+        {
+          text: "Tamam",
+          onPress: () => router.back(),
+        }
+      ]
+    );
+  } catch (error) {
+    console.error("Event creation error:", error);
+    
+    if (error instanceof Error) {
+      setError(error.message);
+    } else {
+      setError("Etkinlik oluşturulurken bir hata oluştu.");
+    }
+  } finally {
+    setUploading(false);
+  }
+};
   const formatDate = (date: Date): string => {
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');

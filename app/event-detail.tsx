@@ -77,30 +77,20 @@ export default function RootLayout() {
             <RouteGuard>
               <Stack>
                 {/* AUTH SCREEN - HEADER GİZLİ */}
-  <Stack.Screen name="auth" options={{ headerShown: false }} />
+                <Stack.Screen name="auth" options={{ headerShown: false }} />
 
-  {/* TABS SCREEN - HEADER GİZLİ */}
-  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                {/* TABS SCREEN - HEADER GİZLİ */}
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-  {/* EVENT DETAIL SCREEN */}
-  <Stack.Screen 
-    name="event-detail" 
-    options={{ 
-      headerShown: false,
-      presentation: 'card',
-      animation: 'slide_from_right',
-    }} 
-  />
-
-  {/* SETTINGS SCREEN - YENİ */}
-  <Stack.Screen 
-    name="settings" 
-    options={{ 
-      headerShown: false,
-      presentation: 'card',
-      animation: 'slide_from_right',
-    }} 
-  />
+                {/* EVENT DETAIL SCREEN - HEADER GİZLİ, EDGE TO EDGE */}
+                <Stack.Screen 
+                  name="event-detail" 
+                  options={{ 
+                    headerShown: false,
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                  }} 
+                />
               </Stack>
             </RouteGuard>
           </SafeAreaProvider>
