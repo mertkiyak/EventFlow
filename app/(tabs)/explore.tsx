@@ -1,4 +1,5 @@
-import { COLLECTION_ID, DATABASE_ID, databases } from '@/lib/appwrite';
+import { COLLECTION_ID, DATABASE_ID, databases, USERS_COLLECTION_ID } from '@/lib/appwrite';
+import { useAuth } from "@/lib/auth-context";
 import { theme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -8,6 +9,7 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  FlatList,
   Image,
   Modal,
   SafeAreaView,
@@ -27,12 +29,29 @@ const { width, height } = Dimensions.get('window');
 const CARD_HEIGHT = 220;
 const CARD_WIDTH = width * 0.8;
 
+// Kullanıcı tipi
+interface User {
+  $id: string;
+  username: string;
+  name?: string;
+  avatar_url?: string;
+  bio?: string;
+  followers_count?: number;
+  following_count?: number;
+}
+
+type SearchTab = 'events' | 'users';
+
 export default function ExploreScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const mapRef = useRef<MapView>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchTab, setSearchTab] = useState<SearchTab>('events');
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [events, setEvents] = useState<Events[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Events | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -47,7 +66,33 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     getLocationAndEvents();
+    // Users collection'a erişimi test et
+    testUsersCollection();
   }, []);
+
+  const testUsersCollection = async () => {
+    try {
+      console.log('=== USERS COLLECTION TEST ===');
+      console.log('DATABASE_ID:', DATABASE_ID);
+      console.log('USERS_COLLECTION_ID:', USERS_COLLECTION_ID);
+      
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        USERS_COLLECTION_ID,
+        [Query.limit(5)]
+      );
+      
+      console.log('✅ Users collection erişimi başarılı!');
+      console.log('Kullanıcı sayısı:', response.documents.length);
+      if (response.documents.length > 0) {
+        console.log('İlk kullanıcı:', response.documents[0]);
+      }
+    } catch (error: any) {
+      console.error('❌ Users collection hatası:', error.message);
+      console.error('Hata kodu:', error.code);
+      console.error('Hata tipi:', error.type);
+    }
+  };
 
   const getLocationAndEvents = async () => {
     try {
@@ -94,6 +139,7 @@ export default function ExploreScreen() {
         }));
 
       setEvents(eventsWithCoords as Events[]);
+      setIsSearching(false);
     } catch (error) {
       console.error('Etkinlik yükleme hatası:', error);
     } finally {
@@ -102,13 +148,22 @@ export default function ExploreScreen() {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim() || searchQuery.length < 2) {
+  if (!searchQuery.trim() || searchQuery.length < 2) {
+    setIsSearching(false);
+    if (searchTab === 'events') {
       await loadEvents();
-      return;
+    } else {
+      setUsers([]);
     }
+    return;
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
+    setIsSearching(true);
+
+    if (searchTab === 'events') {
+      // Etkinlik araması
       const response = await databases.listDocuments(
         DATABASE_ID,
         COLLECTION_ID,
@@ -124,17 +179,66 @@ export default function ExploreScreen() {
         }));
 
       setEvents(eventsWithCoords as Events[]);
-    } catch (error) {
-      console.error('Arama hatası:', error);
-    } finally {
-      setLoading(false);
+    } else {
+      // Kullanıcı araması - USERS_COLLECTION_ID kullanılmalı
+      try {
+        console.log('🔍 Kullanıcı araması başlatılıyor:', searchQuery);
+        console.log('DATABASE_ID:', DATABASE_ID);
+        console.log('USERS_COLLECTION_ID:', USERS_COLLECTION_ID);
+
+        // İlk olarak username'de ara
+        const usernameResponse = await databases.listDocuments(
+          DATABASE_ID,
+          USERS_COLLECTION_ID, // 'users' yerine USERS_COLLECTION_ID
+          [Query.search('username', searchQuery), Query.limit(25)]
+        );
+
+        console.log('✅ Username araması başarılı:', usernameResponse.documents.length);
+
+        // Sonra full_name'de ara
+        const fullNameResponse = await databases.listDocuments(
+          DATABASE_ID,
+          USERS_COLLECTION_ID, // 'users' yerine USERS_COLLECTION_ID
+          [Query.search('name', searchQuery), Query.limit(25)] // 'full_name' yerine 'name' - collection'daki alan adı
+        );
+
+        console.log('✅ Full name araması başarılı:', fullNameResponse.documents.length);
+
+        // İki sonucu birleştir ve duplicate'leri kaldır
+        const allUsers = [...usernameResponse.documents, ...fullNameResponse.documents];
+        const uniqueUsers = Array.from(
+          new Map(allUsers.map(user => [user.$id, user])).values()
+        );
+
+        console.log('✅ Toplam benzersiz kullanıcı:', uniqueUsers.length);
+        setUsers(uniqueUsers as unknown as User[]);
+      } catch (error: any) {
+        console.error('❌ Kullanıcı arama hatası:', error.message);
+        console.error('Hata kodu:', error.code);
+        console.error('Hata tipi:', error.type);
+        setUsers([]);
+      }
     }
-  };
+  } catch (error) {
+    console.error('Arama hatası:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+  // Search query değiştiğinde otomatik ara
+  useEffect(() => {
+    const delaySearch = setTimeout(() => {
+      if (isSearching) {
+        handleSearch();
+      }
+    }, 500);
+
+    return () => clearTimeout(delaySearch);
+  }, [searchQuery, searchTab]);
 
   const handleMarkerPress = (event: Events) => {
     setSelectedEvent(event);
     
-    // Haritayı markera odakla
     if (mapRef.current && event.latitude && event.longitude) {
       mapRef.current.animateToRegion({
         latitude: event.latitude,
@@ -144,7 +248,6 @@ export default function ExploreScreen() {
       }, 500);
     }
 
-    // Kartı yukarı kaydır
     Animated.spring(slideAnim, {
       toValue: 0,
       useNativeDriver: true,
@@ -152,6 +255,32 @@ export default function ExploreScreen() {
       friction: 11,
     }).start();
   };
+
+  const handleSearchResultPress = (event: Events) => {
+    setIsSearching(false);
+    setSearchQuery('');
+    handleMarkerPress(event);
+  };
+
+ // ExploreScreen içindeki handleUserPress fonksiyonu güncellendi:
+
+// ExploreScreen içindeki handleUserPress fonksiyonu - GÜNCELLENDİ:
+
+const handleUserPress = (userId: string) => {
+  setIsSearching(false);
+  setSearchQuery('');
+  
+  // Eğer kendi profilimize tıklandıysa tab navigator'daki profile git
+  if (userId === user?.$id) {
+    router.push('/(tabs)/profile');
+  } else {
+    // Başka birine tıklandıysa ayrı bir ekrana git (user-profile)
+    router.push({
+      pathname: '/user-profile',
+      params: { userId }
+    });
+  }
+};
 
   const closeEventCard = () => {
     Animated.timing(slideAnim, {
@@ -170,6 +299,78 @@ export default function ExploreScreen() {
     return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
   };
 
+  const renderSearchResultItem = ({ item }: { item: Events }) => (
+    <TouchableOpacity 
+      style={styles.searchResultItem}
+      onPress={() => handleSearchResultPress(item)}
+    >
+      <Image
+        source={{ uri: item.image_url || 'https://via.placeholder.com/100x100?text=Event' }}
+        style={styles.searchResultImage}
+      />
+      <View style={styles.searchResultContent}>
+        <Text style={styles.searchResultTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+        <View style={styles.searchResultMeta}>
+          <Ionicons name="calendar-outline" size={14} color="#9CA3AF" />
+          <Text style={styles.searchResultMetaText}>
+            {formatDate(item.event_date)}
+          </Text>
+        </View>
+        <View style={styles.searchResultMeta}>
+          <Ionicons name="location-outline" size={14} color="#9CA3AF" />
+          <Text style={styles.searchResultMetaText} numberOfLines={1}>
+            {item.location}
+          </Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+    </TouchableOpacity>
+  );
+
+  const renderUserItem = ({ item }: { item: User }) => (
+    <TouchableOpacity 
+      style={styles.userResultItem}
+      onPress={() => handleUserPress(item.$id)}
+    >
+      <Image
+        source={{ 
+          uri: item.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(item.name || item.username) 
+        }}
+        style={styles.userAvatar}
+      />
+      <View style={styles.userResultContent}>
+        <Text style={styles.userResultName} numberOfLines={1}>
+          {item.name || item.username}
+        </Text>
+        <Text style={styles.userResultUsername} numberOfLines={1}>
+          @{item.username}
+        </Text>
+        {item.bio && (
+          <Text style={styles.userResultBio} numberOfLines={1}>
+            {item.bio}
+          </Text>
+        )}
+        {(item.followers_count !== undefined || item.following_count !== undefined) && (
+          <View style={styles.userStats}>
+            {item.followers_count !== undefined && (
+              <Text style={styles.userStat}>
+                <Text style={styles.userStatNumber}>{item.followers_count}</Text> takipçi
+              </Text>
+            )}
+            {item.following_count !== undefined && (
+              <Text style={styles.userStat}>
+                <Text style={styles.userStatNumber}>{item.following_count}</Text> takip
+              </Text>
+            )}
+          </View>
+        )}
+      </View>
+      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
@@ -187,78 +388,220 @@ export default function ExploreScreen() {
           <Ionicons name="search" size={20} color="#9CA3AF" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Etkinlik ara..."
+            placeholder={searchTab === 'events' ? 'Etkinlik ara...' : 'Kullanıcı ara...'}
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              if (text.trim().length >= 2) {
+                setIsSearching(true);
+              }
+            }}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => {
               setSearchQuery('');
-              loadEvents();
+              setIsSearching(false);
+              if (searchTab === 'events') {
+                loadEvents();
+              } else {
+                setUsers([]);
+              }
             }}>
               <Ionicons name="close-circle" size={20} color="#9CA3AF" />
             </TouchableOpacity>
           )}
         </View>
 
-        <TouchableOpacity 
-          onPress={getLocationAndEvents}
-          style={styles.locationButton}
+        {searchTab === 'events' && (
+          <TouchableOpacity 
+            onPress={getLocationAndEvents}
+            style={styles.locationButton}
+          >
+            <Ionicons name="location" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Arama Sekmeleri */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, searchTab === 'events' && styles.tabActive]}
+          onPress={() => {
+            setSearchTab('events');
+            if (searchQuery.trim().length >= 2) {
+              setIsSearching(true);
+            } else {
+              setIsSearching(false);
+              loadEvents();
+            }
+          }}
         >
-          <Ionicons name="location" size={24} color="#FFFFFF" />
+          <Ionicons 
+            name="calendar-outline" 
+            size={20} 
+            color={searchTab === 'events' ? theme.colors.primary : theme.colors.textSecondary} 
+          />
+          <Text style={[styles.tabText, searchTab === 'events' && styles.tabTextActive]}>
+            Etkinlikler
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, searchTab === 'users' && styles.tabActive]}
+          onPress={() => {
+            setSearchTab('users');
+            if (searchQuery.trim().length >= 2) {
+              setIsSearching(true);
+            } else {
+              setIsSearching(false);
+              setUsers([]);
+            }
+          }}
+        >
+          <Ionicons 
+            name="people-outline" 
+            size={20} 
+            color={searchTab === 'users' ? theme.colors.primary : theme.colors.textSecondary} 
+          />
+          <Text style={[styles.tabText, searchTab === 'users' && styles.tabTextActive]}>
+            Kişiler
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Harita */}
-      <MapView
-        ref={mapRef}
-        provider={PROVIDER_GOOGLE}
-        style={styles.map}
-        region={region}
-        showsUserLocation={true}
-        showsMyLocationButton={false}
-        customMapStyle={mapDarkStyle}
-      >
-        {events.map((event) => (
-          <Marker
-            key={event.$id}
-            coordinate={{
-              latitude: event.latitude!,
-              longitude: event.longitude!,
-            }}
-            onPress={() => handleMarkerPress(event)}
-          >
-            <View style={styles.markerContainer}>
-              <View style={[
-                styles.marker,
-                selectedEvent?.$id === event.$id && styles.markerSelected
-              ]}>
-                <Ionicons 
-                  name="calendar" 
-                  size={20} 
-                  color={selectedEvent?.$id === event.$id ? "#3B82F6" : "#FFFFFF"} 
-                />
-              </View>
-              {selectedEvent?.$id === event.$id && (
-                <View style={styles.markerPulse} />
-              )}
+      {/* Arama Sonuçları Listesi */}
+      {isSearching && (
+        <View style={styles.searchResultsContainer}>
+          {loading ? (
+            <View style={styles.searchLoadingContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text style={styles.searchLoadingText}>Aranıyor...</Text>
             </View>
-          </Marker>
-        ))}
-      </MapView>
+          ) : searchTab === 'events' ? (
+            events.length > 0 ? (
+              <>
+                <View style={styles.searchResultsHeader}>
+                  <Text style={styles.searchResultsTitle}>
+                    {events.length} Etkinlik Bulundu
+                  </Text>
+                </View>
+                <FlatList
+                  data={events}
+                  renderItem={renderSearchResultItem}
+                  keyExtractor={(item) => item.$id}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.searchResultsList}
+                />
+              </>
+            ) : (
+              <View style={styles.noResultsContainer}>
+                <Ionicons name="calendar-outline" size={64} color="#4B5563" />
+                <Text style={styles.noResultsTitle}>Etkinlik Bulunamadı</Text>
+                <Text style={styles.noResultsText}>
+                  {searchQuery} için etkinlik bulunamadı
+                </Text>
+              </View>
+            )
+          ) : (
+            users.length > 0 ? (
+              <>
+                <View style={styles.searchResultsHeader}>
+                  <Text style={styles.searchResultsTitle}>
+                    {users.length} Kullanıcı Bulundu
+                  </Text>
+                </View>
+                <FlatList
+                  data={users}
+                  renderItem={renderUserItem}
+                  keyExtractor={(item) => item.$id}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.searchResultsList}
+                />
+              </>
+            ) : (
+              <View style={styles.noResultsContainer}>
+                <Ionicons name="people-outline" size={64} color="#4B5563" />
+                <Text style={styles.noResultsTitle}>Kullanıcı Bulunamadı</Text>
+                <Text style={styles.noResultsText}>
+                  {searchQuery} için kullanıcı bulunamadı
+                </Text>
+              </View>
+            )
+          )}
+        </View>
+      )}
 
-      {/* Yükleniyor İndikatörü */}
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#3B82F6" />
+      {/* Harita - Sadece etkinlik sekmesinde ve arama yapılmadığında */}
+      {!isSearching && searchTab === 'events' && (
+        <>
+          <MapView
+            ref={mapRef}
+            provider={PROVIDER_GOOGLE}
+            style={styles.map}
+            region={region}
+            showsUserLocation={true}
+            showsMyLocationButton={false}
+            customMapStyle={mapDarkStyle}
+          >
+            {events.map((event) => (
+              <Marker
+                key={event.$id}
+                coordinate={{
+                  latitude: event.latitude!,
+                  longitude: event.longitude!,
+                }}
+                onPress={() => handleMarkerPress(event)}
+              >
+                <View style={styles.markerContainer}>
+                  <View style={[
+                    styles.marker,
+                    selectedEvent?.$id === event.$id && styles.markerSelected
+                  ]}>
+                    <Ionicons 
+                      name="calendar" 
+                      size={20} 
+                      color={selectedEvent?.$id === event.$id ? "#3B82F6" : "#FFFFFF"} 
+                    />
+                  </View>
+                  {selectedEvent?.$id === event.$id && (
+                    <View style={styles.markerPulse} />
+                  )}
+                </View>
+              </Marker>
+            ))}
+          </MapView>
+
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          )}
+
+          {!loading && events.length > 0 && (
+            <View style={styles.eventBadge}>
+              <Ionicons name="calendar" size={16} color="#FFFFFF" />
+              <Text style={styles.eventBadgeText}>{events.length} Etkinlik</Text>
+            </View>
+          )}
+        </>
+      )}
+
+      {/* Kullanıcı sekmesi için boş state */}
+      {!isSearching && searchTab === 'users' && (
+        <View style={styles.emptyStateContainer}>
+          <Ionicons name="search" size={64} color="#4B5563" />
+          <Text style={styles.emptyStateTitle}>Kişi Ara</Text>
+          <Text style={styles.emptyStateText}>
+            Kullanıcı adı veya isim ile arama yapın
+          </Text>
         </View>
       )}
 
       {/* Etkinlik Detay Kartı */}
-      {selectedEvent && (
+      {selectedEvent && !isSearching && searchTab === 'events' && (
         <Animated.View 
           style={[
             styles.eventCard,
@@ -323,14 +666,6 @@ export default function ExploreScreen() {
         </Animated.View>
       )}
 
-      {/* Etkinlik Sayısı Badge */}
-      {!loading && events.length > 0 && (
-        <View style={styles.eventBadge}>
-          <Ionicons name="calendar" size={16} color="#FFFFFF" />
-          <Text style={styles.eventBadgeText}>{events.length} Etkinlik</Text>
-        </View>
-      )}
-
       {/* Detaylı Bilgi Modal */}
       <Modal
         visible={showDetailModal}
@@ -383,7 +718,6 @@ export default function ExploreScreen() {
                   <TouchableOpacity 
                     style={styles.joinButton}
                     onPress={() => {
-                      // Katılma işlemi
                       setShowDetailModal(false);
                     }}
                   >
@@ -483,6 +817,188 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: theme.colors.primary,
     borderRadius: 12,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 12,
+    backgroundColor: theme.colors.background,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  tabActive: {
+    backgroundColor: `${theme.colors.primary}20`,
+    borderColor: theme.colors.primary,
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  tabTextActive: {
+    color: theme.colors.primary,
+  },
+  searchResultsContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  searchResultsHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  searchResultsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  searchResultsList: {
+    padding: 16,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  searchResultImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  searchResultContent: {
+    flex: 1,
+    gap: 4,
+  },
+  searchResultTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  searchResultMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  searchResultMetaText: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    flex: 1,
+  },
+  userResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  userAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+  },
+  userResultContent: {
+    flex: 1,
+    gap: 4,
+  },
+  userResultName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  userResultUsername: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+  },
+  userResultBio: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+  },
+  userStats: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 6,
+  },
+  userStat: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
+  userStatNumber: {
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  searchLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  searchLoadingText: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+  },
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  noResultsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.colors.textPrimary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  noResultsText: {
+    fontSize: 15,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    backgroundColor: theme.colors.background,
+  },
+  emptyStateTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: theme.colors.textPrimary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 15,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
   map: {
     flex: 1,
@@ -663,7 +1179,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   modalEventDescription: {
-    backgroundColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
     borderRadius: 12,
     padding: 16,
     marginTop: 12,

@@ -5,12 +5,14 @@ import { useAuth } from "@/lib/auth-context";
 import { theme } from '@/lib/theme';
 import { Ionicons } from "@expo/vector-icons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Platform,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -38,17 +40,31 @@ interface Participant {
   event?: Events;
 }
 
-// TODO: Participants collection ID'nizi buraya ekleyin
-const PARTICIPANTS_COLLECTION_ID = "YOUR_PARTICIPANTS_COLLECTION_ID";
+const PARTICIPANTS_COLLECTION_ID = "68fcff760027118990fd";
 
 export default function ProfileScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  // URL'den gelen userId - başka kullanıcı profili mi bakıyoruz?
+  const viewingUserId = params.userId as string | undefined;
+  const isOwnProfile = !viewingUserId || viewingUserId === user?.$id;
+  
+  // params değiştiğinde profili yeniden yükle
+  useEffect(() => {
+    if (user) {
+      fetchAllData();
+    }
+  }, [user, viewingUserId]);
+  
   const [myEvents, setMyEvents] = useState<Events[]>([]);
   const [joinedEvents, setJoinedEvents] = useState<Participant[]>([]);
   const [isEditProfileModalVisible, setIsEditProfileModalVisible] = useState(false);
   const [isEditEventModalVisible, setIsEditEventModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Events | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [editEventFormData, setEditEventFormData] = useState<EditEventData>({
     title: "",
     location: "",
@@ -62,8 +78,8 @@ export default function ProfileScreen() {
     username: "",
     age: 24,
     location: "İstanbul",
-    bio: "Seyahat etmeyi, yeni yerler keşfetmeyi ve farklı kültürlere dalmayı seven biriyim.",
-    interests: ["✈️ Seyahat", "🌲 Doğa Yürüyüşü", "📚 Kitap Okuma"],
+    bio: "Henüz bir bio eklenmedi.",
+    interests: [],
     avatarUrl: "https://via.placeholder.com/200x200?text=Avatar",
   });
 
@@ -72,28 +88,43 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (user) {
-      fetchMyEvents();
-      fetchUserProfile();
-      fetchJoinedEvents();
+      fetchAllData();
     }
-  }, [user]);
+  }, [user, viewingUserId]);
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchUserProfile(),
+      fetchMyEvents(),
+      fetchJoinedEvents(),
+    ]);
+    setLoading(false);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchAllData();
+    setRefreshing(false);
+  };
 
   const fetchUserProfile = async () => {
-    if (!user) return;
+    const targetUserId = viewingUserId || user?.$id;
+    if (!targetUserId) return;
 
     try {
       const response = await databases.getDocument(
         DATABASE_ID,
         USERS_COLLECTION_ID,
-        user.$id
+        targetUserId
       );
 
       setProfile({
-        name: response.name || user.name || "Kullanıcı",
+        name: response.name || "Kullanıcı",
         username: response.username || "",
         age: response.age || 24,
         location: response.location || "İstanbul",
-        bio: response.bio || "",
+        bio: response.bio || "Henüz bir bio eklenmedi.",
         interests: response.interests || [],
         avatarUrl: response.avatarUrl || "https://via.placeholder.com/200x200?text=Avatar",
       });
@@ -103,7 +134,8 @@ export default function ProfileScreen() {
     } catch (error: any) {
       console.error("Error fetching user profile:", error);
 
-      if (error.code === 404) {
+      // Sadece kendi profilimizde hata varsa yeni profil oluştur
+      if (error.code === 404 && isOwnProfile) {
         await createUserProfile();
       }
     }
@@ -255,12 +287,14 @@ export default function ProfileScreen() {
   };
 
   const fetchMyEvents = async () => {
-    if (!user) return;
+    const targetUserId = viewingUserId || user?.$id;
+    if (!targetUserId) return;
+    
     try {
       const response = await databases.listDocuments(
         DATABASE_ID,
         COLLECTION_ID,
-        [Query.equal("user_id", user.$id), Query.orderDesc("$createdAt")]
+        [Query.equal("user_id", targetUserId), Query.orderDesc("$createdAt")]
       );
       setMyEvents(response.documents as Events[]);
     } catch (error) {
@@ -269,14 +303,50 @@ export default function ProfileScreen() {
   };
 
   const fetchJoinedEvents = async () => {
-    if (!user) return;
+    const targetUserId = viewingUserId || user?.$id;
+    if (!targetUserId) return;
+    
     try {
-      // TODO: Gerçek participants collection'dan çek
-      // Şimdilik mock data
-      const mockJoinedEvents: Participant[] = [];
-      setJoinedEvents(mockJoinedEvents);
+      console.log('Fetching joined events for user:', targetUserId);
+      
+      const participantsResponse = await databases.listDocuments(
+        DATABASE_ID,
+        PARTICIPANTS_COLLECTION_ID,
+        [
+          Query.equal("user_id", targetUserId),
+          Query.orderDesc("joined_at")
+        ]
+      );
+
+      console.log('Participants found:', participantsResponse.total);
+
+      const joinedEventsWithDetails: Participant[] = [];
+      
+      for (const participant of participantsResponse.documents) {
+        try {
+          const event = await databases.getDocument(
+            DATABASE_ID,
+            COLLECTION_ID,
+            participant.event_id
+          );
+          
+          joinedEventsWithDetails.push({
+            $id: participant.$id,
+            user_id: participant.user_id,
+            event_id: participant.event_id,
+            joined_at: participant.joined_at,
+            event: event as Events,
+          });
+        } catch (error) {
+          console.error(`Error fetching event ${participant.event_id}:`, error);
+        }
+      }
+
+      console.log('Valid joined events:', joinedEventsWithDetails.length);
+      setJoinedEvents(joinedEventsWithDetails);
     } catch (error) {
       console.error("Error fetching joined events:", error);
+      setJoinedEvents([]);
     }
   };
 
@@ -291,7 +361,12 @@ export default function ProfileScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // TODO: Participants collection'dan sil
+              await databases.deleteDocument(
+                DATABASE_ID,
+                PARTICIPANTS_COLLECTION_ID,
+                participantId
+              );
+              
               setJoinedEvents(prev => prev.filter(p => p.$id !== participantId));
               Alert.alert("Başarılı", "Etkinlikten ayrıldınız.");
             } catch (error) {
@@ -315,8 +390,25 @@ export default function ProfileScreen() {
           style: "destructive",
           onPress: async () => {
             try {
+              try {
+                const participants = await databases.listDocuments(
+                  DATABASE_ID,
+                  PARTICIPANTS_COLLECTION_ID,
+                  [Query.equal("event_id", eventId)]
+                );
+
+                await Promise.all(
+                  participants.documents.map(p => 
+                    databases.deleteDocument(DATABASE_ID, PARTICIPANTS_COLLECTION_ID, p.$id)
+                  )
+                );
+              } catch (error) {
+                console.log("No participants to delete or error:", error);
+              }
+
               await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, eventId);
               fetchMyEvents();
+              Alert.alert("Başarılı", "Etkinlik başarıyla silindi.");
             } catch (error) {
               console.error("Error deleting event:", error);
               Alert.alert("Hata", "Etkinlik silinirken bir hata oluştu.");
@@ -361,6 +453,13 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleEventPress = (eventId: string) => {
+    router.push({
+      pathname: '/event-detail',
+      params: { eventId }
+    });
+  };
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     const months = [
@@ -374,6 +473,18 @@ export default function ProfileScreen() {
     return `${day} ${month}, ${dayName}`;
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000000ff" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Profil yükleniyor...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000ff" />
@@ -383,31 +494,53 @@ export default function ProfileScreen() {
           icon="arrow-left"
           size={24}
           iconColor="#fff"
-          onPress={() => router.back()}
+          onPress={() => {
+            // Eğer başkasının profilindeyse, kendi profiline dön
+            if (!isOwnProfile) {
+              router.push('/(tabs)/profile');
+            } else {
+              // Kendi profilindeyse normal geri git
+              router.back();
+            }
+          }}
           style={styles.headerButton}
         />
-        <Text style={styles.headerTitle}>Profil</Text>
+        <Text style={styles.headerTitle}>
+          {isOwnProfile ? 'Profil' : `@${profile.username}`}
+        </Text>
         <View style={styles.headerRight}>
-          <IconButton
-            icon="pencil"
-            size={24}
-            iconColor="#fff"
-            onPress={() => setIsEditProfileModalVisible(true)}
-            style={styles.headerButton}
-          />
-          <IconButton
-            icon="cog"
-            size={24}
-            iconColor="#fff"
-            onPress={() => router.push('/settings')}
-            style={styles.headerButton}
-          />
+          {isOwnProfile && (
+            <>
+              <IconButton
+                icon="pencil"
+                size={24}
+                iconColor="#fff"
+                onPress={() => setIsEditProfileModalVisible(true)}
+                style={styles.headerButton}
+              />
+              <IconButton
+                icon="cog"
+                size={24}
+                iconColor="#fff"
+                onPress={() => router.push('/settings')}
+                style={styles.headerButton}
+              />
+            </>
+          )}
         </View>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
       >
         {/* Avatar ve Profil Bilgileri */}
         <View style={styles.profileSection}>
@@ -446,36 +579,55 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Takip Et Butonu - Sadece başkasının profilindeyse */}
+        {!isOwnProfile && (
+          <TouchableOpacity style={styles.followButton}>
+            <Ionicons name="person-add" size={20} color="#fff" />
+            <Text style={styles.followButtonText}>Takip Et</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Hakkımda */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Hakkımda</Text>
+          <Text style={styles.cardTitle}>Hakkında</Text>
           <Text style={styles.bioText}>{profile.bio}</Text>
         </View>
 
         {/* İlgi Alanları */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>İlgi Alanları</Text>
-          <View style={styles.interestsContainer}>
-            {profile.interests.map((interest, index) => (
-              <View key={index} style={styles.interestChip}>
-                <Text style={styles.interestText}>{interest}</Text>
-              </View>
-            ))}
+        {profile.interests.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>İlgi Alanları</Text>
+            <View style={styles.interestsContainer}>
+              {profile.interests.map((interest, index) => (
+                <View key={index} style={styles.interestChip}>
+                  <Text style={styles.interestText}>{interest}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* Oluşturduğum Etkinlikler */}
+        {/* Etkinlikler */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Etkinliklerim</Text>
+          <Text style={styles.cardTitle}>
+            {isOwnProfile ? 'Etkinliklerim' : 'Etkinlikleri'}
+          </Text>
           {myEvents.length === 0 ? (
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="calendar-blank" size={48} color="#9eb7a8" />
-              <Text style={styles.emptyText}>Henüz etkinlik eklemediniz</Text>
+              <Text style={styles.emptyText}>
+                {isOwnProfile ? 'Henüz etkinlik eklemediniz' : 'Henüz etkinlik eklenmemiş'}
+              </Text>
             </View>
           ) : (
             <View style={styles.eventsContainer}>
               {myEvents.map((event) => (
-                <View key={event.$id} style={styles.eventCard}>
+                <TouchableOpacity 
+                  key={event.$id} 
+                  style={styles.eventCard}
+                  onPress={() => handleEventPress(event.$id)}
+                  activeOpacity={0.7}
+                >
                   <Image
                     source={{ uri: event.image_url || "https://via.placeholder.com/100x100?text=Event" }}
                     style={styles.eventImage}
@@ -484,89 +636,121 @@ export default function ProfileScreen() {
                     <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
                     <Text style={styles.eventDate}>{formatDate(event.event_date)}</Text>
                   </View>
-                  <View style={styles.eventActions}>
-                    <IconButton
-                      icon="pencil"
-                      size={20}
-                      iconColor="rgba(255,255,255,0.6)"
-                      onPress={() => handleOpenEditEventModal(event)}
-                      style={styles.actionButton}
-                    />
-                    <IconButton
-                      icon="delete"
-                      size={20}
-                      iconColor="rgba(255,255,255,0.6)"
-                      onPress={() => handleDeleteEvent(event.$id)}
-                      style={styles.actionButton}
-                    />
-                  </View>
-                </View>
+                  {isOwnProfile && (
+                    <View style={styles.eventActions}>
+                      <IconButton
+                        icon="pencil"
+                        size={20}
+                        iconColor="rgba(255,255,255,0.6)"
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditEventModal(event);
+                        }}
+                        style={styles.actionButton}
+                      />
+                      <IconButton
+                        icon="delete"
+                        size={20}
+                        iconColor="rgba(255,255,255,0.6)"
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleDeleteEvent(event.$id);
+                        }}
+                        style={styles.actionButton}
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
               ))}
             </View>
           )}
         </View>
 
-        {/* Katıldığım Etkinlikler */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Katıldığım Etkinlikler</Text>
-          {joinedEvents.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="calendar-outline" size={48} color="#9eb7a8" />
-              <Text style={styles.emptyText}>Henüz hiçbir etkinliğe katılmadınız</Text>
-            </View>
-          ) : (
-            <View style={styles.eventsContainer}>
-              {joinedEvents.map((participant) => (
-                <View key={participant.$id} style={styles.eventCard}>
-                  <Image
-                    source={{ 
-                      uri: participant.event?.image_url || "https://via.placeholder.com/100x100?text=Event" 
-                    }}
-                    style={styles.eventImage}
-                  />
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventTitle} numberOfLines={1}>
-                      {participant.event?.title || 'Etkinlik'}
-                    </Text>
-                    <Text style={styles.eventDate}>
-                      {participant.event?.event_date 
-                        ? formatDate(participant.event.event_date) 
-                        : 'Tarih belirtilmemiş'}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.leaveButton}
-                    onPress={() => handleLeaveEvent(
-                      participant.$id, 
-                      participant.event?.title || 'Etkinlik'
-                    )}
-                  >
-                    <Ionicons name="exit-outline" size={20} color="#EF4444" />
-                  </TouchableOpacity>
+        {/* Katıldığı Etkinlikler - Sadece kendi profilinde göster */}
+        {isOwnProfile && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Katıldığım Etkinlikler</Text>
+              {joinedEvents.length > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{joinedEvents.length}</Text>
                 </View>
-              ))}
+              )}
             </View>
-          )}
-        </View>
+            {joinedEvents.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="calendar-outline" size={48} color="#a1a1aa" />
+                <Text style={styles.emptyText}>Henüz hiçbir etkinliğe katılmadınız</Text>
+                <Text style={styles.emptySubtext}>Etkinlikleri keşfedin ve katılın!</Text>
+              </View>
+            ) : (
+              <View style={styles.eventsContainer}>
+                {joinedEvents.map((participant) => (
+                  <TouchableOpacity
+                    key={participant.$id}
+                    style={styles.eventCard}
+                    onPress={() => handleEventPress(participant.event_id)}
+                    activeOpacity={0.7}
+                  >
+                    <Image
+                      source={{ 
+                        uri: participant.event?.image_url || "https://via.placeholder.com/100x100?text=Event" 
+                      }}
+                      style={styles.eventImage}
+                    />
+                    <View style={styles.eventInfo}>
+                      <Text style={styles.eventTitle} numberOfLines={1}>
+                        {participant.event?.title || 'Etkinlik'}
+                      </Text>
+                      <Text style={styles.eventDate}>
+                        {participant.event?.event_date 
+                          ? formatDate(participant.event.event_date) 
+                          : 'Tarih belirtilmemiş'}
+                      </Text>
+                      <Text style={styles.joinedDate}>
+                        Katılma: {new Date(participant.joined_at).toLocaleDateString('tr-TR')}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.leaveButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleLeaveEvent(
+                          participant.$id, 
+                          participant.event?.title || 'Etkinlik'
+                        );
+                      }}
+                    >
+                      <Ionicons name="exit-outline" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
-      {/* Profil Düzenleme Modal */}
-      <EditProfileModal
-        visible={isEditProfileModalVisible}
-        onDismiss={() => setIsEditProfileModalVisible(false)}
-        profileData={profile}
-        onSave={handleSaveProfile}
-      />
+      {/* Profil Düzenleme Modal - Sadece kendi profilinde */}
+      {isOwnProfile && (
+        <>
+          <EditProfileModal
+            visible={isEditProfileModalVisible}
+            onDismiss={() => setIsEditProfileModalVisible(false)}
+            profileData={profile}
+            onSave={handleSaveProfile}
+          />
 
-      {/* Etkinlik Düzenleme Modal */}
-      {selectedEvent && (
-        <EditEventModal
-          visible={isEditEventModalVisible}
-          onDismiss={() => setIsEditEventModalVisible(false)}
-          eventData={editEventFormData}
-          setEventData={setEditEventFormData}
-          onSave={handleUpdateEvent}
-        />
+          {selectedEvent && (
+            <EditEventModal
+              visible={isEditEventModalVisible}
+              onDismiss={() => setIsEditEventModalVisible(false)}
+              eventData={editEventFormData}
+              setEventData={setEditEventFormData}
+              onSave={handleUpdateEvent}
+            />
+          )}
+        </>
       )}
     </SafeAreaView>
   );
@@ -576,6 +760,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    color: theme.colors.textSecondary,
+    fontSize: 16,
   },
   header: {
     flexDirection: "row",
@@ -594,6 +788,8 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     gap: -8,
+    minWidth: 80,
+    justifyContent: 'flex-end',
   },
   headerTitle: {
     color: theme.colors.textPrimary,
@@ -615,7 +811,7 @@ const styles = StyleSheet.create({
     height: 128,
     borderRadius: 64,
     borderWidth: 4,
-    borderColor: `${theme.colors.primary}80`,
+    borderColor: theme.colors.primary,
     marginBottom: 16,
     overflow: "hidden",
   },
@@ -674,6 +870,21 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: theme.colors.border,
   },
+  followButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  followButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: 24,
@@ -682,11 +893,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   cardTitle: {
     color: theme.colors.textPrimary,
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 12,
+  },
+  badge: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   bioText: {
     color: theme.colors.textSecondary,
@@ -699,12 +929,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   interestChip: {
-    backgroundColor: `${theme.colors.primary}20`,
+    backgroundColor: 'rgba(129, 140, 248, 0.15)',
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: `${theme.colors.primary}40`,
+    borderColor: 'rgba(129, 140, 248, 0.3)',
   },
   interestText: {
     color: theme.colors.primary,
@@ -743,6 +973,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
   },
+  joinedDate: {
+    color: '#10B981',
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '500',
+  },
   eventActions: {
     flexDirection: "row",
     gap: 4,
@@ -764,5 +1000,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
     marginTop: 8,
+  },
+  emptySubtext: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginTop: 4,
+    opacity: 0.7,
   },
 });

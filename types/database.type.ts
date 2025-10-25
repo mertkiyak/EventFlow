@@ -11,7 +11,14 @@ export interface Events  extends Models.Document {
   created_at: string;
 image_url: string;
 }
-
+export interface CustomUser extends Models.User<Models.Preferences> {
+  username?: string;
+  avatar_url?: string;
+  bio?: string;
+  location?: string;
+  name: string;
+  email: string;
+}
 export interface Message {
   $id: string;
   senderId: string;

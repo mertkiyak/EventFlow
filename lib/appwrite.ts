@@ -55,3 +55,6 @@ export interface RealTimeEventResponse {
 // ========================================
 export type { Models } from 'react-native-appwrite';
 export { ID, Query };
+
+
+export const PARTICIPANTS_COLLECTION_ID = '68fcff760027118990fd'; 
